@@ -1,0 +1,74 @@
+import { MapPin, AlertCircle } from "lucide-react";
+import type { ReactNode } from "react";
+import { formatDate, type Data, type Match } from "../lib/types";
+import Badge from "./Badge";
+import Staffing from "./Staffing";
+
+const statuses: Record<string, string> = {
+  finished: "Spelad",
+  postponed: "Inväntar ny tid",
+  cancelled: "Inställd",
+};
+
+interface MatchCardProps {
+  match: Match;
+  data: Data;
+  children?: ReactNode;
+  showStaffing?: boolean;
+}
+
+export default function MatchCard({
+  match,
+  data,
+  children,
+  showStaffing = true,
+}: MatchCardProps) {
+  const date = match.starts_at
+    ? formatDate(match.starts_at, { weekday: "long", day: "numeric", month: "long" })
+    : "Datum inväntas";
+  const time = match.starts_at
+    ? formatDate(match.starts_at, { hour: "2-digit", minute: "2-digit" })
+    : "– – : – –";
+
+  return (
+    <article className={showStaffing ? "match-card" : "match-card shift-card"}>
+      <div className="match-date-row">
+        <h2>{date.charAt(0).toUpperCase() + date.slice(1)}</h2>
+        <Badge tone={match.competition === "22208" ? "purple" : ""}>
+          {match.competition === "22208" ? "DM" : "Serie"}
+        </Badge>
+      </div>
+      <div className="match-overview">
+        <p className="match-time">{time}</p>
+        <div className="match-opponent">
+          <h3>
+            <span>vs.</span> {match.away_team}
+          </h3>
+          <p className="arena">
+            <MapPin size={18} />
+            {match.arena}
+          </p>
+        </div>
+      </div>
+      <div className="match-alerts">
+        {statuses[match.status] && <Badge tone="amber">{statuses[match.status]}</Badge>}
+        {match.changed_at && <Badge tone="amber">Ändrad matchinfo</Badge>}
+        {(match.needs_review || match.missing_from_source) && (
+          <p className="match-warning">
+            <AlertCircle size={16} />
+            {match.missing_from_source
+              ? "Saknas i källan. Bemanningen är bevarad."
+              : "Matchtiden behöver kontrolleras."}
+          </p>
+        )}
+      </div>
+      {showStaffing && (
+        <section className="match-staffing">
+          <h3>Bemanning</h3>
+          <Staffing match={match} data={data} />
+        </section>
+      )}
+      {children}
+    </article>
+  );
+}
