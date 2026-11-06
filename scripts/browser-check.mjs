@@ -11,11 +11,12 @@ const page = await browser.newPage({
   viewport: { width: 390, height: 844 },
   reducedMotion: "reduce",
 });
+const baseUrl = process.env.APP_URL || "http://127.0.0.1:5173";
 const errors = [];
 page.on("pageerror", (error) => errors.push(error.message));
 
 try {
-  await page.goto("http://127.0.0.1:5173");
+  await page.goto(baseUrl);
   await expect(
     page.getByRole("heading", { name: "Hemmamatcher", exact: true }),
   ).toBeVisible();
@@ -56,7 +57,7 @@ try {
   for (const width of [320, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     for (const route of ["matcher", "mina", "instruktioner", "admin"]) {
-      await page.goto(`http://127.0.0.1:5173/#${route}`);
+      await page.goto(`${baseUrl}/#${route}`);
       await expect(page.locator("h1")).toBeVisible();
       assert.ok(
         await page.evaluate(
@@ -66,7 +67,7 @@ try {
       );
     }
   }
-  await page.goto("http://127.0.0.1:5173/#matcher");
+  await page.goto(`${baseUrl}/#matcher`);
   await page.screenshot({ path: "/tmp/hemmaplan-desktop.png", fullPage: true });
   assert.deepEqual(errors, []);
   console.log(

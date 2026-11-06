@@ -37,3 +37,7 @@ Säsong och tävlings-ID behöver kontrolleras inför nästa säsong. UI och wor
 ## Kvar att verifiera externt
 
 Supabase Auth, e-postleverans, verkliga RLS-anrop via Supabase API, Edge Function, GitHub-token, schemalagda Actions och Pages-publicering behöver provas i ägarens egna konton. Lokal byggning, lokal PostgreSQL med RLS och webbläsarflöden kan testas utan dem. Inga riktiga personuppgifter ska importeras förrän administratören uttryckligen godkänner förhandsvisningen.
+
+## Uppdatering 2026-11-06: lagseparerad datamodell
+
+Den ursprungliga modellen ovan gäller analysen av Excel, inte längre globala databasbehörigheter. Migrationerna har skrivits om för ett tomt projekt: föreningar, lag, lagmedlemskap och `team_id` på person-/matchuppgifter. Aktuell synk hämtar hemmalagsnamn och tävlingar från respektive lags konfiguration. De gamla två källorna finns endast som demo/manuell källkontroll och provisioneringsexempel. Se README för aktuella anrop, grants, begränsningar och installationsordning. Ingen ändring har gjorts i det riktiga Supabase-projektet.

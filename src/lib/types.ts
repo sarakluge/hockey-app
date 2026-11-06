@@ -9,7 +9,22 @@ export const ROLES = [
 ] as const;
 
 export type Role = (typeof ROLES)[number];
+export type Team = {
+  id: string;
+  club_id: string;
+  name: string;
+  home_team: string;
+  sync_enabled: boolean;
+};
+
+export type Competition = {
+  competition: string;
+  kind: "serie" | "dm";
+};
+
 export type Match = {
+  team_id?: string;
+  kind?: "serie" | "dm";
   id: string;
   competition: string;
   source_id: string;
@@ -34,6 +49,7 @@ export type Family = {
 export type Assignment = { match_id: string; role: Role; family_id: string };
 
 export type Profile = {
+  team_id: string;
   id: string;
   email: string;
   role: "ADMIN" | "PARENT";

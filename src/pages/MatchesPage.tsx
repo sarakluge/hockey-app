@@ -43,8 +43,11 @@ export default function MatchesPage({ app }: { app: HockeyApp }) {
             onChange={(event) => setCompetition(event.target.value)}
           >
             <option value="all">Serie & DM</option>
-            <option value="21495">Serie</option>
-            <option value="22208">DM</option>
+            {app.competitions.map((item) => (
+              <option key={item.competition} value={item.competition}>
+                {item.kind === "dm" ? "DM" : "Serie"} · {item.competition}
+              </option>
+            ))}
           </select>
         </label>
       </div>

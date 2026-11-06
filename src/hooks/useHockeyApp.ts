@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { supabase } from "../lib/supabase";
+import { supabase, configuredTeamId } from "../lib/supabase";
 import { demoData } from "../lib/demo";
-import type { Data, Profile, Role } from "../lib/types";
+import type { Data, Profile, Role, Team, Competition } from "../lib/types";
 import { previewExcel, type ImportPreview } from "../lib/excel";
 
 const EMPTY_DATA: Data = {
@@ -18,6 +18,11 @@ export function useHockeyApp() {
   const [data, setData] = useState<Data>(
     supabase ? EMPTY_DATA : structuredClone(demoData),
   );
+  const [team, setTeam] = useState<Team | null>(null);
+  const [competitions, setCompetitions] = useState<Competition[]>([
+    { competition: "21495", kind: "serie" },
+    { competition: "22208", kind: "dm" },
+  ]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [email, setEmail] = useState("");
@@ -50,10 +55,24 @@ export function useHockeyApp() {
         setData(EMPTY_DATA);
         return;
       }
+      if (!configuredTeamId)
+        throw new Error("VITE_TEAM_ID måste anges för det valda laget.");
+      const { error: accessError } = await supabase.rpc("request_team_access", {
+        p_team_id: configuredTeamId,
+      });
+      if (accessError) throw accessError;
+      const { data: selectedTeam, error: teamError } = await supabase
+        .from("teams")
+        .select("*")
+        .eq("id", configuredTeamId)
+        .single();
+      if (teamError) throw teamError;
+      setTeam(selectedTeam);
       const { data: p, error: pe } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", user.id)
+        .eq("team_id", configuredTeamId)
         .single();
       if (pe) throw pe;
       setProfile(p);
@@ -61,6 +80,12 @@ export function useHockeyApp() {
         setData(EMPTY_DATA);
         return;
       }
+      const { data: teamCompetitions, error: competitionError } = await supabase
+        .from("team_competitions")
+        .select("competition, kind")
+        .eq("team_id", configuredTeamId);
+      if (competitionError) throw competitionError;
+      setCompetitions(teamCompetitions || []);
       const results = await Promise.all(
         [
           "matches",
@@ -69,11 +94,15 @@ export function useHockeyApp() {
           "instructions",
           "sync_logs",
           ...(p.role === "ADMIN" ? ["profiles"] : []),
-        ].map((t) => supabase!.from(t).select("*")),
+        ].map((t) => supabase!.from(t).select("*").eq("team_id", configuredTeamId)),
       );
       for (const r of results) if (r.error) throw r.error;
       setData({
-        matches: results[0].data as Data["matches"],
+        matches: (results[0].data as Data["matches"]).map((match) => ({
+          ...match,
+          kind: teamCompetitions?.find((item) => item.competition === match.competition)
+            ?.kind,
+        })),
         families: results[1].data as Data["families"],
         assignments: results[2].data as Data["assignments"],
         instructions: results[3].data as Data["instructions"],
@@ -81,6 +110,8 @@ export function useHockeyApp() {
         profiles: (results[5]?.data || []) as Profile[],
       });
     } catch (e) {
+      setProfile(null);
+      setData(EMPTY_DATA);
       setError(e instanceof Error ? e.message : "Data kunde inte hämtas. Försök igen.");
     } finally {
       setLoading(false);
@@ -97,6 +128,11 @@ export function useHockeyApp() {
   }, [demo]);
   function startDemo() {
     setDemo(true);
+    setTeam(null);
+    setCompetitions([
+      { competition: "21495", kind: "serie" },
+      { competition: "22208", kind: "dm" },
+    ]);
     setData(structuredClone(demoData));
     setProfile(null);
     setLoading(false);
@@ -123,6 +159,7 @@ export function useHockeyApp() {
     await supabase?.auth.signOut();
     setProfile(null);
     setUserId(null);
+    setTeam(null);
     setData(EMPTY_DATA);
     setDemo(false);
   }
@@ -143,12 +180,13 @@ export function useHockeyApp() {
       ? await supabase!
           .from("assignments")
           .upsert(
-            { match_id: matchId, role, family_id: familyId },
-            { onConflict: "match_id,role" },
+            { team_id: configuredTeamId, match_id: matchId, role, family_id: familyId },
+            { onConflict: "team_id,match_id,role" },
           )
       : await supabase!
           .from("assignments")
           .delete()
+          .eq("team_id", configuredTeamId)
           .eq("match_id", matchId)
           .eq("role", role);
     if (result.error) setError(result.error.message);
@@ -161,7 +199,11 @@ export function useHockeyApp() {
   async function updateProfile(id: string, patch: Partial<Profile>) {
     if (!supabase || demo) return;
     setBusy(true);
-    const { error } = await supabase.from("profiles").update(patch).eq("id", id);
+    const { error } = await supabase
+      .from("profiles")
+      .update(patch)
+      .eq("team_id", configuredTeamId)
+      .eq("id", id);
     if (error) setError(error.message);
     else {
       notify("Användaren är uppdaterad.");
@@ -177,7 +219,7 @@ export function useHockeyApp() {
     setBusy(true);
     setError("");
     const { data: result, error } = await supabase!.functions.invoke("dispatch-sync", {
-      body: {},
+      body: { team_id: configuredTeamId },
     });
     setBusy(false);
     if (error)
@@ -214,7 +256,10 @@ export function useHockeyApp() {
       return;
     }
     setBusy(true);
-    const { error } = await supabase!.rpc("import_excel", { p_data: preview });
+    const { error } = await supabase!.rpc("import_excel", {
+      p_team_id: configuredTeamId,
+      p_data: preview,
+    });
     if (error) setError(error.message);
     else {
       setPreview(null);
@@ -250,6 +295,8 @@ export function useHockeyApp() {
 
   return {
     demo,
+    team,
+    competitions,
     data,
     profile,
     userId,

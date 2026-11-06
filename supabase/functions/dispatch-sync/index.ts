@@ -23,7 +23,17 @@ Deno.serve(async (req: Request) => {
     error,
   } = await db.auth.getUser();
   if (error || !user) return respond("Logga in", 401);
-  const { data: admin } = await db.rpc("is_admin");
+  let teamId: string;
+  try {
+    const body = await req.json();
+    if (typeof body.team_id !== "string" || !/^[0-9a-f-]{36}$/i.test(body.team_id)) {
+      return respond("Lagets UUID krävs", 400);
+    }
+    teamId = body.team_id;
+  } catch {
+    return respond("Ogiltig begäran", 400);
+  }
+  const { data: admin } = await db.rpc("is_admin", { p_team_id: teamId });
   if (!admin) return respond("Administratör krävs", 403);
   const token = Deno.env.get("GITHUB_DISPATCH_TOKEN"),
     repo = Deno.env.get("GITHUB_REPOSITORY");
@@ -32,7 +42,7 @@ Deno.serve(async (req: Request) => {
       "Manuell start är inte konfigurerad. Starta sync.yml i GitHub Actions.",
       503,
     );
-  const { error: limit } = await db.rpc("request_sync");
+  const { error: limit } = await db.rpc("request_sync", { p_team_id: teamId });
   if (limit) return respond(limit.message, 429);
   try {
     const result = await fetch(
@@ -44,7 +54,7 @@ Deno.serve(async (req: Request) => {
           Accept: "application/vnd.github+json",
           "X-GitHub-Api-Version": "2022-11-28",
         },
-        body: JSON.stringify({ ref: "main" }),
+        body: JSON.stringify({ ref: "main", inputs: { team_id: teamId } }),
       },
     );
     if (!result.ok)

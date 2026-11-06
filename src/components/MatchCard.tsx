@@ -23,6 +23,7 @@ export default function MatchCard({
   children,
   showStaffing = true,
 }: MatchCardProps) {
+  const isDm = match.kind === "dm" || (!match.kind && match.competition === "22208");
   const date = match.starts_at
     ? formatDate(match.starts_at, { weekday: "long", day: "numeric", month: "long" })
     : "Datum inväntas";
@@ -34,9 +35,7 @@ export default function MatchCard({
     <article className={showStaffing ? "match-card" : "match-card shift-card"}>
       <div className="match-date-row">
         <h2>{date.charAt(0).toUpperCase() + date.slice(1)}</h2>
-        <Badge tone={match.competition === "22208" ? "purple" : ""}>
-          {match.competition === "22208" ? "DM" : "Serie"}
-        </Badge>
+        <Badge tone={isDm ? "purple" : ""}>{isDm ? "DM" : "Serie"}</Badge>
       </div>
       <div className="match-overview">
         <p className="match-time">{time}</p>

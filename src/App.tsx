@@ -58,7 +58,8 @@ export default function App() {
           )}
           <div className="header-title">
             <p>
-              U16F <span>· Team Söderort</span>
+              {app.team?.name || "U16F"}{" "}
+              <span>· {app.team?.home_team || "Team Söderort"}</span>
             </p>
             <h1>{title}</h1>
           </div>

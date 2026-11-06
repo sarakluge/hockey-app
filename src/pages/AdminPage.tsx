@@ -62,7 +62,8 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
                       month: "short",
                     })
                   : "Tid saknas"}{" "}
-                · {m.away_team} · {m.competition === "22208" ? "DM" : "Serie"}
+                · {m.away_team} ·{" "}
+                {m.kind === "dm" || (demo && m.competition === "22208") ? "DM" : "Serie"}
               </option>
             ))}
           </select>
@@ -193,7 +194,10 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
                   <option value="">Välj verifierad match – gissa inte</option>
                   {matches.map((m) => (
                     <option key={m.id} value={m.id}>
-                      {m.competition === "22208" ? "DM" : "Serie"} ·{" "}
+                      {m.kind === "dm" || (demo && m.competition === "22208")
+                        ? "DM"
+                        : "Serie"}{" "}
+                      ·{" "}
                       {m.starts_at
                         ? formatDate(m.starts_at, {
                             day: "numeric",
@@ -376,7 +380,12 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
           ))
         )}
       </section>
-      <ManualImport onDone={() => void load()} demo={demo} />
+      <ManualImport
+        onDone={() => void load()}
+        demo={demo}
+        homeTeam={app.team?.home_team || "Team Söderort(FOC/THH)"}
+        competitions={app.competitions.map((item) => item.competition)}
+      />
     </div>
   );
 }

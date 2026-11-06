@@ -1,12 +1,16 @@
 import { useState } from "react";
-import { supabase } from "../lib/supabase";
+import { supabase, configuredTeamId } from "../lib/supabase";
 
 export default function ManualImport({
   onDone,
   demo,
+  homeTeam,
+  competitions,
 }: {
   onDone: () => void;
   demo: boolean;
+  homeTeam: string;
+  competitions: string[];
 }) {
   const [text, setText] = useState(""),
     [result, setResult] = useState(""),
@@ -23,8 +27,8 @@ export default function ManualImport({
           !r.id ||
           !/^\d+$/.test(r.source_id) ||
           r.id !== `${r.competition}:${r.source_id}` ||
-          !["21495", "22208"].includes(r.competition) ||
-          r.home_team !== "Team Söderort(FOC/THH)" ||
+          !competitions.includes(r.competition) ||
+          r.home_team !== homeTeam ||
           !r.away_team ||
           !r.arena ||
           !["scheduled", "finished", "postponed", "cancelled"].includes(r.status) ||
@@ -40,6 +44,7 @@ export default function ManualImport({
         return;
       }
       const { error } = await supabase!.rpc("manual_matches", {
+        p_team_id: configuredTeamId,
         p_matches: rows,
       });
       if (error) throw error;
