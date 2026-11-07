@@ -206,27 +206,41 @@ export function useHockeyApp() {
       }));
       return;
     }
+    const version = loadVersion.current;
     setBusy(true);
-    const result = familyId
-      ? await supabase!
-          .from("assignments")
-          .upsert(
-            { team_id: configuredTeamId, match_id: matchId, role, family_id: familyId },
-            { onConflict: "team_id,match_id,role" },
-          )
-      : await supabase!
-          .from("assignments")
-          .delete()
-          .eq("team_id", configuredTeamId)
-          .eq("match_id", matchId)
-          .eq("role", role);
-    if (result.error) setError(result.error.message);
-    else {
+    try {
+      const result = familyId
+        ? await supabase!
+            .from("assignments")
+            .upsert(
+              { team_id: configuredTeamId, match_id: matchId, role, family_id: familyId },
+              { onConflict: "team_id,match_id,role" },
+            )
+        : await supabase!
+            .from("assignments")
+            .delete()
+            .eq("team_id", configuredTeamId)
+            .eq("match_id", matchId)
+            .eq("role", role);
+      if (version !== loadVersion.current) return;
+      if (result.error) throw result.error;
+      // Keep the list mounted so scroll, filters and focus survive saving.
+      setData((d) => ({
+        ...d,
+        assignments: [
+          ...d.assignments.filter((a) => a.match_id !== matchId || a.role !== role),
+          ...(familyId ? [{ match_id: matchId, role, family_id: familyId }] : []),
+        ],
+      }));
       notify("Bemanningen är sparad.");
-      await load();
+    } catch {
+      if (version === loadVersion.current)
+        setError("Bemanningen kunde inte sparas. Försök igen.");
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
   }
+
   async function addPlayers(input: string) {
     const names = [
       ...new Set(
@@ -322,6 +336,32 @@ export function useHockeyApp() {
     }
     setBusy(false);
   }
+  async function saveMyDutyRoles(roles: string[]) {
+    if (!roles.length) throw new Error("Välj minst en uppgift.");
+    if (demo) {
+      setData((d) => ({
+        ...d,
+        families: d.families.map((f) =>
+          f.id === ownFamily
+            ? {
+                ...f,
+                ovr_ok: roles.includes("OVR"),
+                clock_ok: roles.includes("Klockan"),
+                speaker_ok: roles.includes("Speaker/Musik"),
+              }
+            : f,
+        ),
+      }));
+      return;
+    }
+    const { error } = await supabase!.rpc("save_my_duty_roles", {
+      p_team_id: configuredTeamId,
+      p_roles: roles,
+    });
+    if (error) throw new Error("Uppgifterna kunde inte sparas. Försök igen.");
+    await load();
+  }
+
   async function sync() {
     if (demo) {
       notify("Demoläget hämtar inga matchdata. Koppla Supabase för att aktivera synk.");
@@ -413,6 +453,7 @@ export function useHockeyApp() {
     addPlayers,
     updatePlayer,
     updateProfile,
+    saveMyDutyRoles,
     sync,
     exportData,
   };

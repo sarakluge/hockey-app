@@ -52,6 +52,7 @@ test("Empty-project migrations and team isolation without automatic grants", asy
       "001_initial.sql",
       "002_manual_import.sql",
       "003_player_registration.sql",
+      "004_profile_roles.sql",
     ]) {
       await db.exec(await readFile(`supabase/migrations/${file}`, "utf8"));
     }
@@ -206,6 +207,61 @@ test("Empty-project migrations and team isolation without automatic grants", asy
             .rows[0].approved,
           false,
         );
+      },
+    );
+
+    await t.test(
+      "family duties require a valid choice and stay scoped to the linked family",
+      async () => {
+        await login("anon");
+        await assert.rejects(
+          db.query("select public.save_my_duty_roles($1, array['OVR'])", [TEAM_A]),
+        );
+        await login("authenticated", PARENT_A);
+        for (const roles of [null, [], ["ADMIN"], [null]]) {
+          await assert.rejects(
+            db.query("select public.save_my_duty_roles($1, $2::text[])", [TEAM_A, roles]),
+          );
+        }
+        await assert.rejects(
+          db.query("select public.save_my_duty_roles($1, array['OVR'])", [TEAM_B]),
+        );
+        await db.query("select public.save_my_duty_roles($1, array['OVR'])", [TEAM_A]);
+        const family = await db.query<{ ovr_ok: boolean; clock_ok: boolean }>(
+          "select * from public.families where id = $1",
+          [FAMILY_A],
+        );
+        assert.equal(family.rows[0].ovr_ok, true);
+        assert.equal(family.rows[0].clock_ok, false);
+        await db.query("update public.families set clock_ok = true");
+        assert.equal(
+          (
+            await db.query<{ clock_ok: boolean }>(
+              "select clock_ok from public.families where id = $1",
+              [FAMILY_A],
+            )
+          ).rows[0].clock_ok,
+          false,
+        );
+        await login("authenticated", PENDING_A);
+        await assert.rejects(
+          db.query("select public.save_my_duty_roles($1, array['OVR'])", [TEAM_A]),
+        );
+        await login("authenticated", PARENT_A);
+        await db.query(
+          "select public.save_my_duty_roles($1, array['OVR', 'Klockan', 'Speaker/Musik'])",
+          [TEAM_A],
+        );
+        await root();
+        await db.query(
+          "update auth.users set email = 'new@example.invalid' where id = $1",
+          [PARENT_A],
+        );
+        const profile = await db.query<{ email: string }>(
+          "select email from public.profiles where id = $1",
+          [PARENT_A],
+        );
+        assert.equal(profile.rows[0].email, "new@example.invalid");
       },
     );
 

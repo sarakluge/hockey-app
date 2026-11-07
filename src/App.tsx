@@ -1,12 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import {
-  CalendarDays,
-  UserRound,
-  Info,
-  Settings,
-  RefreshCw,
-  ArrowLeft,
-} from "lucide-react";
+import { CalendarDays, UserRound, Info, RefreshCw, ArrowLeft } from "lucide-react";
 import {
   AppBar,
   Alert,
@@ -17,6 +10,8 @@ import {
   CircularProgress,
   Container,
   IconButton,
+  Menu,
+  MenuItem,
   Paper,
   Stack,
   Toolbar,
@@ -28,6 +23,7 @@ import HockeyMark from "./components/HockeyMark";
 import AuthPage from "./pages/AuthPage";
 import MatchesPage from "./pages/MatchesPage";
 import MyShiftsPage from "./pages/MyShiftsPage";
+import ProfilePage from "./pages/ProfilePage";
 const InfoPage = lazy(() => import("./pages/InfoPage"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 
@@ -40,15 +36,26 @@ const tabs = [
 function currentPage() {
   const hash = window.location.hash.slice(1);
   if (hash === "bemanning") return "matcher";
-  return [...tabs.map((tab) => tab.id), "admin"].includes(hash) ? hash : "matcher";
+  return [...tabs.map((tab) => tab.id), "admin", "profil"].includes(hash)
+    ? hash
+    : "matcher";
 }
 
 export default function App() {
   const app = useHockeyApp();
   const [page, setPage] = useState(currentPage);
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
+  const family = app.data.families.find((f) => f.id === app.ownFamily);
+  const needsRoles =
+    !app.loading && !!family && !family.ovr_ok && !family.clock_ok && !family.speaker_ok;
   const access = app.demo || app.profile?.approved;
-  const title =
-    page === "admin" ? "Administration" : tabs.find((tab) => tab.id === page)?.title;
+  const title = needsRoles
+    ? "Välj familjens uppgifter"
+    : page === "profil"
+      ? "Min profil"
+      : page === "admin"
+        ? "Administration"
+        : tabs.find((tab) => tab.id === page)?.title;
   const latestSync = app.data.logs
     .filter((log) => log.success)
     .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
@@ -59,7 +66,7 @@ export default function App() {
     return () => window.removeEventListener("hashchange", updatePage);
   }, []);
 
-  if (!access || app.recoveringPassword) {
+  if ((!access && !needsRoles) || app.recoveringPassword) {
     return <AuthPage app={app} />;
   }
 
@@ -82,7 +89,7 @@ export default function App() {
             gap: 2,
           }}
         >
-          {page === "admin" ? (
+          {!needsRoles && (page === "admin" || page === "profil") ? (
             <IconButton href="#matcher" aria-label="Till matcher" color="inherit">
               <ArrowLeft />
             </IconButton>
@@ -97,11 +104,39 @@ export default function App() {
               {title}
             </Typography>
           </Box>
-          {access && app.admin && page !== "admin" && (
-            <IconButton href="#admin" aria-label="Administration" color="inherit">
-              <Settings />
-            </IconButton>
-          )}
+          <IconButton
+            aria-label="Profilmeny"
+            color="inherit"
+            aria-controls={menuAnchor ? "profile-menu" : undefined}
+            aria-haspopup="true"
+            aria-expanded={!!menuAnchor}
+            onClick={(e) => setMenuAnchor(e.currentTarget)}
+          >
+            <UserRound />
+          </IconButton>
+          <Menu
+            id="profile-menu"
+            anchorEl={menuAnchor}
+            open={!!menuAnchor}
+            onClose={() => setMenuAnchor(null)}
+          >
+            <MenuItem component="a" href="#profil" onClick={() => setMenuAnchor(null)}>
+              Min profil
+            </MenuItem>
+            {app.admin && !needsRoles && (
+              <MenuItem component="a" href="#admin" onClick={() => setMenuAnchor(null)}>
+                Administration
+              </MenuItem>
+            )}
+            <MenuItem
+              onClick={() => {
+                setMenuAnchor(null);
+                void app.logout();
+              }}
+            >
+              Logga ut
+            </MenuItem>
+          </Menu>
         </Toolbar>
       </AppBar>
       <Container
@@ -136,10 +171,17 @@ export default function App() {
             </Stack>
           ) : (
             <Suspense fallback={<CircularProgress aria-label="Hämtar sida" />}>
-              {page === "matcher" && <MatchesPage app={app} />}
-              {page === "mina" && <MyShiftsPage app={app} />}
-              {page === "instruktioner" && <InfoPage app={app} />}
-              {page === "admin" && <AdminPage app={app} />}
+              {needsRoles ? (
+                <ProfilePage key={app.userId} app={app} required />
+              ) : (
+                <>
+                  {page === "profil" && <ProfilePage app={app} />}
+                  {page === "matcher" && <MatchesPage app={app} />}
+                  {page === "mina" && <MyShiftsPage app={app} />}
+                  {page === "instruktioner" && <InfoPage app={app} />}
+                  {page === "admin" && <AdminPage app={app} />}
+                </>
+              )}
             </Suspense>
           )}
         </Stack>
@@ -168,37 +210,39 @@ export default function App() {
           )}
         </Box>
       </Container>
-      <Paper
-        component="nav"
-        aria-label="Huvudmeny"
-        square
-        elevation={3}
-        sx={{
-          position: "fixed",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          zIndex: (theme) => theme.zIndex.appBar,
-          pb: "env(safe-area-inset-bottom)",
-        }}
-      >
-        <BottomNavigation
-          showLabels
-          value={page === "admin" ? false : page}
-          sx={{ height: 72 }}
+      {!needsRoles && (
+        <Paper
+          component="nav"
+          aria-label="Huvudmeny"
+          square
+          elevation={3}
+          sx={{
+            position: "fixed",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            zIndex: (theme) => theme.zIndex.appBar,
+            pb: "env(safe-area-inset-bottom)",
+          }}
         >
-          {tabs.map(({ id, label, Icon }) => (
-            <BottomNavigationAction
-              key={id}
-              value={id}
-              href={`#${id}`}
-              label={label}
-              icon={<Icon size={25} />}
-              aria-current={page === id ? "page" : undefined}
-            />
-          ))}
-        </BottomNavigation>
-      </Paper>
+          <BottomNavigation
+            showLabels
+            value={page === "admin" || page === "profil" ? false : page}
+            sx={{ height: 72 }}
+          >
+            {tabs.map(({ id, label, Icon }) => (
+              <BottomNavigationAction
+                key={id}
+                value={id}
+                href={`#${id}`}
+                label={label}
+                icon={<Icon size={25} />}
+                aria-current={page === id ? "page" : undefined}
+              />
+            ))}
+          </BottomNavigation>
+        </Paper>
+      )}
     </Box>
   );
 }
