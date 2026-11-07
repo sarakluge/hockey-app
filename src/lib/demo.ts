@@ -98,4 +98,48 @@ export const demoData: Data = {
   logs: [],
   profiles: [],
   unavailability: [],
+  replacementSearches: [],
+  replacementInvitations: [],
+  replacementNotifications: [],
 };
+
+// Local visual preview of an incoming request; never writes to Supabase.
+export function replacementPreviewData(): Data {
+  const data = structuredClone(demoData);
+  const now = new Date();
+  const createdAt = now.toISOString();
+  const deadline = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
+  data.matches = data.matches.map((match) =>
+    match.id === "demo:3"
+      ? {
+          ...match,
+          starts_at: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+        }
+      : match,
+  );
+  data.assignments.push({
+    match_id: "demo:3",
+    role: "Matchvärd",
+    family_id: "demo-family-0",
+  });
+  data.replacementSearches.push({
+    id: "demo-replacement-request",
+    match_id: "demo:3",
+    role: "Matchvärd",
+    original_family_id: "demo-family-0",
+    replacement_family_id: null,
+    status: "searching",
+    current_group: 1,
+    deadline,
+    created_at: createdAt,
+  });
+  data.replacementInvitations.push({
+    search_id: "demo-replacement-request",
+    family_id: "demo-family-2",
+    priority_group: 1,
+    response: "pending",
+    invited_at: createdAt,
+    responded_at: null,
+  });
+  return data;
+}

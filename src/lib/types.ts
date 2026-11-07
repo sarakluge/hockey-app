@@ -74,7 +74,37 @@ export type SyncLog = {
   message: string;
 };
 
+export type ReplacementSearch = {
+  id: string;
+  match_id: string;
+  role: Role;
+  original_family_id: string;
+  replacement_family_id: string | null;
+  status: "searching" | "found" | "exhausted" | "cancelled";
+  current_group: number;
+  deadline: string | null;
+  created_at: string;
+};
+export type ReplacementInvitation = {
+  search_id: string;
+  family_id: string;
+  priority_group: number;
+  response: "queued" | "pending" | "declined" | "accepted" | "closed";
+  invited_at: string | null;
+  responded_at: string | null;
+};
+export type ReplacementNotification = {
+  id: string;
+  search_id: string;
+  family_id: string;
+  message: string;
+  created_at: string;
+};
+
 export type Data = {
+  replacementSearches: ReplacementSearch[];
+  replacementInvitations: ReplacementInvitation[];
+  replacementNotifications: ReplacementNotification[];
   matches: Match[];
   families: Family[];
   assignments: Assignment[];

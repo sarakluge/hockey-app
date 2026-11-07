@@ -2,6 +2,7 @@ import { Box } from "@mui/material";
 import { Alert, Button } from "@mui/material";
 import { Mic, Timer, ClipboardList } from "lucide-react";
 import type { HockeyApp } from "../hooks/useHockeyApp";
+import ReplacementSearches, { FindReplacement } from "../components/ReplacementSearches";
 import MatchCard from "../components/MatchCard";
 
 export default function MyShiftsPage({ app }: { app: HockeyApp }) {
@@ -19,6 +20,18 @@ export default function MyShiftsPage({ app }: { app: HockeyApp }) {
           Administratören behöver koppla ditt konto till rätt spelare.
         </Alert>
       )}
+      {app.data.replacementNotifications
+        .filter((n) => n.family_id === app.ownFamily)
+        .sort((a, b) => b.created_at.localeCompare(a.created_at))
+        .slice(0, 8)
+        .map((n) => (
+          <Alert severity="info" key={n.id}>
+            {n.message}
+          </Alert>
+        ))}
+      <Box id="replacement-inbox" tabIndex={-1} sx={{ scrollMarginTop: 16 }}>
+        <ReplacementSearches app={app} />
+      </Box>
       {matches.map((match) => {
         const ownAssignments = assignments.filter(
           (assignment) => assignment.match_id === match.id,
@@ -35,20 +48,33 @@ export default function MyShiftsPage({ app }: { app: HockeyApp }) {
                     ? Mic
                     : ClipboardList;
               return (
-                <Button
-                  sx={{
-                    justifyContent: "flex-start",
-                    marginTop: "12px",
-                    background: "#eff6ff",
-                  }}
-                  variant="outlined"
-                  fullWidth
-                  href="#instruktioner"
-                  key={assignment.role}
-                  startIcon={<Icon size={25} />}
-                >
-                  <strong>Min uppgift: {assignment.role}</strong>
-                </Button>
+                <Box key={assignment.role}>
+                  <Button
+                    sx={{
+                      justifyContent: "flex-start",
+                      marginTop: "12px",
+                      background: "#eff6ff",
+                    }}
+                    variant="outlined"
+                    fullWidth
+                    href="#instruktioner"
+                    key={assignment.role}
+                    startIcon={<Icon size={25} />}
+                  >
+                    <strong>Min uppgift: {assignment.role}</strong>
+                  </Button>
+                  {match.status !== "finished" &&
+                    match.status !== "cancelled" &&
+                    (!match.starts_at ||
+                      new Date(match.starts_at) >
+                        (app.demo ? new Date("2026-11-05T12:00:00Z") : new Date())) && (
+                      <FindReplacement
+                        app={app}
+                        matchId={match.id}
+                        role={assignment.role}
+                      />
+                    )}
+                </Box>
               );
             })}
           </MatchCard>

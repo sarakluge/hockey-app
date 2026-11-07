@@ -3,6 +3,7 @@ import { CalendarDays, UserRound, Info, RefreshCw, ArrowLeft } from "lucide-reac
 import {
   AppBar,
   Alert,
+  Badge,
   BottomNavigation,
   BottomNavigationAction,
   Box,
@@ -19,6 +20,8 @@ import {
 } from "@mui/material";
 import { useHockeyApp } from "./hooks/useHockeyApp";
 import { formatDate } from "./lib/types";
+import { pendingReplacementRequests } from "./lib/replacementRequests";
+import ReplacementRequestBanner from "./components/ReplacementRequestBanner";
 import HockeyMark from "./components/HockeyMark";
 import AuthPage from "./pages/AuthPage";
 import MatchesPage from "./pages/MatchesPage";
@@ -45,6 +48,17 @@ export default function App() {
   const app = useHockeyApp();
   const [page, setPage] = useState(currentPage);
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
+  const [showReplacementInbox, setShowReplacementInbox] = useState(false);
+  const [deferredRequests, setDeferredRequests] = useState<string[]>([]);
+  const [requestClock, setRequestClock] = useState(Date.now);
+  const pendingRequests = pendingReplacementRequests(
+    app.data,
+    app.ownFamily,
+    requestClock,
+  );
+  const visibleRequests = pendingRequests.filter(
+    (request) => !deferredRequests.includes(request.key),
+  );
   const family = app.data.families.find((f) => f.id === app.ownFamily);
   const needsRoles =
     !app.loading && !!family && !family.ovr_ok && !family.clock_ok && !family.speaker_ok;
@@ -56,6 +70,15 @@ export default function App() {
       : page === "admin"
         ? "Administration"
         : tabs.find((tab) => tab.id === page)?.title;
+  const latestReplacementNotice = app.data.replacementNotifications
+    .filter(
+      (n) =>
+        n.family_id === app.ownFamily &&
+        !app.data.replacementSearches.some(
+          (s) => s.id === n.search_id && s.status === "searching",
+        ),
+    )
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
   const latestSync = app.data.logs
     .filter((log) => log.success)
     .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
@@ -65,6 +88,25 @@ export default function App() {
     window.addEventListener("hashchange", updatePage);
     return () => window.removeEventListener("hashchange", updatePage);
   }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setRequestClock(Date.now()), 15000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    setDeferredRequests([]);
+  }, [access, app.ownFamily, app.team?.id]);
+
+  useEffect(() => {
+    if (page !== "mina" || !showReplacementInbox || app.loading || needsRoles) return;
+    const inbox = document.getElementById("replacement-inbox");
+    if (inbox) {
+      inbox.scrollIntoView({ block: "start" });
+      inbox.focus({ preventScroll: true });
+      setShowReplacementInbox(false);
+    }
+  }, [page, showReplacementInbox, app.loading, needsRoles]);
 
   if ((!access && !needsRoles) || app.recoveringPassword) {
     return <AuthPage app={app} />;
@@ -139,6 +181,18 @@ export default function App() {
           </Menu>
         </Toolbar>
       </AppBar>
+      {!app.loading && !needsRoles && (
+        <ReplacementRequestBanner
+          requests={visibleRequests}
+          onShow={() => setShowReplacementInbox(true)}
+          onDefer={() =>
+            setDeferredRequests((previous) => [
+              ...previous,
+              ...visibleRequests.map((request) => request.key),
+            ])
+          }
+        />
+      )}
       <Container
         component="main"
         id="main-content"
@@ -150,6 +204,18 @@ export default function App() {
           {app.demo && (
             <Alert severity="info" variant="outlined">
               Demo · Fiktiva matcher och familjer
+            </Alert>
+          )}
+          {page !== "mina" && latestReplacementNotice && (
+            <Alert
+              severity="info"
+              action={
+                <Button color="inherit" href="#mina">
+                  Visa
+                </Button>
+              }
+            >
+              {latestReplacementNotice.message}
             </Alert>
           )}
           {(app.message || app.error) && (
@@ -236,7 +302,20 @@ export default function App() {
                 value={id}
                 href={`#${id}`}
                 label={label}
-                icon={<Icon size={25} />}
+                icon={
+                  id === "mina" ? (
+                    <Badge badgeContent={pendingRequests.length} color="error">
+                      <Icon size={25} />
+                    </Badge>
+                  ) : (
+                    <Icon size={25} />
+                  )
+                }
+                aria-label={
+                  id === "mina" && pendingRequests.length
+                    ? `Mina pass, ${pendingRequests.length} obesvarade förfrågningar`
+                    : label
+                }
                 aria-current={page === id ? "page" : undefined}
               />
             ))}

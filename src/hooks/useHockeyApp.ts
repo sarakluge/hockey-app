@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase, configuredTeamId } from "../lib/supabase";
-import { demoData } from "../lib/demo";
+import { demoData, replacementPreviewData } from "../lib/demo";
 import type { Data, Profile, Role, Team, Competition } from "../lib/types";
 import { isPasswordRecoveryUrl, clearPasswordRecoveryUrl } from "../lib/auth";
 
@@ -12,13 +12,23 @@ const EMPTY_DATA: Data = {
   logs: [],
   profiles: [],
   unavailability: [],
+  replacementSearches: [],
+  replacementInvitations: [],
+  replacementNotifications: [],
 };
 
 export function useHockeyApp() {
-  const [demo, setDemo] = useState(false);
+  const [replacementPreview] = useState(
+    () =>
+      import.meta.env.DEV &&
+      new URLSearchParams(window.location.search).get("preview") === "replacement",
+  );
+  const [demo, setDemo] = useState(replacementPreview);
   const recoveryRef = useRef(isPasswordRecoveryUrl(window.location.href));
   const [recoveringPassword, setRecoveringPassword] = useState(recoveryRef.current);
-  const [data, setData] = useState<Data>(EMPTY_DATA);
+  const [data, setData] = useState<Data>(() =>
+    replacementPreview ? replacementPreviewData() : EMPTY_DATA,
+  );
   const [team, setTeam] = useState<Team | null>(null);
   const [competitions, setCompetitions] = useState<Competition[]>([
     { competition: "21495", kind: "serie" },
@@ -30,7 +40,7 @@ export function useHockeyApp() {
   const [error, setError] = useState("");
   const loadVersion = useRef(0);
   const hasLoadedData = useRef(false);
-  const [loading, setLoading] = useState(!!supabase);
+  const [loading, setLoading] = useState(!replacementPreview && !!supabase);
   const [busy, setBusy] = useState(false);
   const admin = demo || profile?.role === "ADMIN";
   const ownFamily = demo ? "demo-family-2" : profile?.family_id;
@@ -108,6 +118,9 @@ export function useHockeyApp() {
           "instructions",
           "sync_logs",
           "family_unavailability",
+          "replacement_searches",
+          "replacement_invitations",
+          "replacement_notifications",
           ...(p.role === "ADMIN" ? ["profiles"] : []),
         ].map((t) => supabase!.from(t).select("*").eq("team_id", configuredTeamId)),
       );
@@ -124,7 +137,10 @@ export function useHockeyApp() {
         instructions: results[3].data as Data["instructions"],
         logs: results[4].data as Data["logs"],
         unavailability: results[5].data as Data["unavailability"],
-        profiles: (results[6]?.data || []) as Profile[],
+        replacementSearches: results[6].data as Data["replacementSearches"],
+        replacementInvitations: results[7].data as Data["replacementInvitations"],
+        replacementNotifications: results[8].data as Data["replacementNotifications"],
+        profiles: (results[9]?.data || []) as Profile[],
       });
       hasLoadedData.current = true;
     } catch (e) {
@@ -160,6 +176,64 @@ export function useHockeyApp() {
       subscription?.data.subscription.unsubscribe();
     };
   }, [demo]);
+  useEffect(() => {
+    if (demo || !profile?.approved || recoveringPassword) return;
+    const refresh = () => {
+      if (document.visibilityState === "visible") void load();
+    };
+    const timer = window.setInterval(refresh, 30000);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [demo, profile?.approved, recoveringPassword]);
+
+  async function replacementAction(
+    action: string,
+    input: { matchId?: string; role?: Role; searchId?: string; familyId?: string },
+  ) {
+    if (busy) return;
+    if (demo) {
+      notify(
+        "Ersättarsökning kräver en ansluten databas. Demoläget skickar inga förfrågningar.",
+      );
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      const result =
+        action === "start"
+          ? await supabase!.rpc("start_replacement", {
+              p_team_id: configuredTeamId,
+              p_match_id: input.matchId,
+              p_role: input.role,
+            })
+          : await supabase!.rpc("act_on_replacement", {
+              p_search_id: input.searchId,
+              p_action: action,
+              p_family_id: input.familyId || null,
+            });
+      if (result.error) throw result.error;
+      await load();
+      notify(
+        action === "accept" || action === "assign"
+          ? "Passet har tagits över. Schemat är uppdaterat."
+          : "Ersättarsökningen är uppdaterad.",
+      );
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : (error as { message?: string }).message ||
+              "Ändringen kunde inte sparas. Uppdatera och försök igen.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function startDemo() {
     loadVersion.current += 1;
     setDemo(true);
@@ -504,6 +578,7 @@ export function useHockeyApp() {
     logout,
     assign,
     setUnavailable,
+    replacementAction,
     addPlayers,
     updatePlayer,
     updateProfile,

@@ -2,6 +2,7 @@ import { Alert, Checkbox, FormControlLabel, Box } from "@mui/material";
 import SelectField from "../components/SelectField";
 import { useState } from "react";
 import type { HockeyApp } from "../hooks/useHockeyApp";
+import ReplacementSearches from "../components/ReplacementSearches";
 import MatchCard from "../components/MatchCard";
 
 export default function MatchesPage({ app }: { app: HockeyApp }) {
@@ -68,6 +69,7 @@ export default function MatchesPage({ app }: { app: HockeyApp }) {
       <Box sx={{ display: "grid", gap: "20px" }}>
         {matches.map((match) => (
           <MatchCard key={match.id} match={match} data={app.data}>
+            <ReplacementSearches app={app} matchId={match.id} />
             {app.ownFamily &&
               match.status !== "finished" &&
               match.status !== "cancelled" &&
@@ -98,8 +100,8 @@ export default function MatchesPage({ app }: { app: HockeyApp }) {
                         item.match_id === match.id && item.family_id === app.ownFamily,
                     ) && (
                       <Alert severity="warning">
-                        Ni har redan ett pass på denna match. Kontakta administratören för
-                        att ändra bemanningen.
+                        Ni har redan ett pass på denna match. Använd Hitta ersättare under
+                        Mina pass om ni behöver hjälp.
                       </Alert>
                     )}
                 </Box>

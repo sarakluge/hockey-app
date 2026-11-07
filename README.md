@@ -35,7 +35,7 @@ Appen visar inloggningssidan först för utloggade besökare. Utan Supabase-URL 
 
 En användare kan vara ADMIN i lag A, FÖRÄLDER i lag B och sakna åtkomst till lag C, även om lagen tillhör samma förening. Godkännande i ett lag gäller inte i ett annat. Lagadministratörer kan inte skapa föreningar/lag, ändra källkonfiguration eller ge sig själva tillgång till andra lag. Den initiala provisioneringen gör projektägaren i SQL Editor.
 
-Föräldrar läser bara godkända lags uppgifter och får inte ändra bemanningen. Administratörer redigerar endast sina lag. RLS och RPC-funktionerna kontrollerar medlemskap i databasen; klientens filter är inte en säkerhetsgräns. `team_id` kan inte flyttas på befintliga rader. Familjekopplingar över laggränsen stoppas dessutom av foreign keys.
+Föräldrar läser bara godkända lags uppgifter. De kan ta över pass via en aktiv ersättarförfrågan; övrig bemanning ändras av administratörer. Administratörer redigerar endast sina lag. RLS och RPC-funktionerna kontrollerar medlemskap i databasen; klientens filter är inte en säkerhetsgräns. `team_id` kan inte flyttas på befintliga rader. Familjekopplingar över laggränsen stoppas dessutom av foreign keys.
 
 **Aktuell frontendinstallation visar ett valt lag via `VITE_TEAM_ID`.** Flera installationer kan använda samma Supabase-projekt med olika lag-ID. Databasen stöder flera medlemskap per användare, men denna MVP har ännu ingen lagväljare i gränssnittet. Lag-ID är offentlig konfiguration, inte en hemlighet eller en behörighet.
 
@@ -44,7 +44,7 @@ Föräldrar läser bara godkända lags uppgifter och får inte ändra bemanninge
 1. Använd det nya projektet Seket och välj lämplig databasregion. Skapa inte manuella kopior av appens tabeller i Table Editor.
 2. Låt **Automatically expose new tables** vara **avstängd**. Du behöver inte aktivera den.
 3. Data API behöver vara aktiverat och `public` behöver ingå bland dess exponerade scheman. Detta är en annan inställning än automatiska rättigheter till nya tabeller. `private` ska **inte** läggas till bland exponerade scheman.
-4. Öppna SQL Editor och kör hela `supabase/migrations/001_initial.sql` en gång. Kör därefter hela `supabase/migrations/002_manual_import.sql` en gång. Kör sedan `supabase/migrations/003_player_registration.sql`. Alla har en egen transaktion med `begin`/`commit`. Hoppa inte över rättighetsdelen i slutet av filerna.
+4. Öppna SQL Editor och kör hela `supabase/migrations/001_initial.sql` en gång. Kör därefter hela `supabase/migrations/002_manual_import.sql` en gång. Kör sedan migrationerna `003_player_registration.sql`, `004_profile_roles.sql`, `005_family_unavailability.sql`, `006_shift_replacements.sql` och `007_replacement_cron.sql` i ordning. Alla har en egen transaktion med `begin`/`commit`. Hoppa inte över rättighetsdelen i slutet av filerna.
 5. Alternativt kan en projektägare använda Supabase CLI med en granskad projektlänkning och `supabase db push`. Det kör externa ändringar och har inte gjorts som del av denna lokala granskning.
 
 Migrationerna ger **explicita, objektspecifika** rättigheter:
@@ -52,7 +52,7 @@ Migrationerna ger **explicita, objektspecifika** rättigheter:
 - `anon`: ingen läs-/skrivrätt till apptabeller eller appens RPC-funktioner.
 - `authenticated`: `SELECT` på angivna tabeller med RLS. Skrivrätt till familjer, instruktioner och bemanning begränsas av lagets adminpolicy. Medlemskap kan bara uppdateras i kolumnerna `role`, `approved`, `family_id`, eller tas bort av lagadministratören. Inga direkta medlemskapsinlägg tillåts.
 - `service_role`: explicit `SELECT` på lag och tävlingskonfiguration, `INSERT` på synkloggar och `EXECUTE` på `sync_matches(uuid, jsonb)`. Det räcker för synkscriptet även utan standardgrants.
-- RPC-funktioner har explicit `EXECUTE`; privata hjälpfunktioner är inte tillgängliga för API-roller. Ingen funktion förlitar sig på automatisk funktionsåtkomst.
+- RPC-funktioner har explicit `EXECUTE`; privata arbetsfunktioner är inte tillgängliga för API-roller. Familjehjälparen `private.my_family` har endast läsrätt genom funktionsanrop för RLS. Ingen funktion förlitar sig på automatisk funktionsåtkomst.
 
 UUID används utan sekvenser, så inga sekvensgrants behövs. Projektets globala default privileges ändras inte. `GRANT SELECT ON ALL TABLES ...` eller bred `GRANT ALL` behövs inte och ska inte användas för att lösa åtkomstproblem.
 
@@ -249,3 +249,30 @@ Kör i en annan terminal:
 ```sh
 APP_URL=http://127.0.0.1:5183 node scripts/auth-browser-check.mjs
 ```
+
+## Hitta ersättare
+
+För att se en inkommande förfrågan lokalt, starta `npm run dev` och öppna `/?preview=replacement#mina`. Förhandsvisningen är endast tillgänglig i utvecklingsläge, använder fiktiva familjer och sparar inga svar.
+
+På en databas som redan har migrationerna 001–005 körs endast **006 och 007**, i ordning, före den nya frontendversionen. Inga externa databasändringar görs av `npm run build`.
+
+Föräldrar startar sökning under Mina pass. Befintlig bemanning ligger kvar tills någon accepterar. Förfrågningar, status och besked finns under Mina pass och på matchen. Aktiva förfrågningar visas i en global banner och räknas i markeringen vid Mina pass. Påminn mig senare döljer bannern under besöket utan att ändra svaret; nya förfrågningar visas ändå. Vid nästa besök visas aktuella förfrågningar igen. Det senaste avslutande beskedet visas också ovanför övriga vyer. Meddelandena sparas i databasen; e-post och push ingår inte. Inloggade vyer uppdateras var 30:e sekund och när fönstret återfår fokus. Demoläget skickar inga ersättarförfrågningar.
+
+Alla familjer med rätt behörighet, utan annat pass på samma match och utan otillgänglighetsmarkering, kan tillfrågas. Belastningen räknas på samtliga tilldelningar i laget, även spelade matcher. Vid varje ny sökning sparas en ny prioritering: färre än genomsnittet får grupp 1, från genomsnittet till närmast högre heltal får grupp 2, och fler får grupp 3. Tomma grupper hoppas över. Behörighet och tillgänglighet kontrolleras igen inför utskick och övertagande.
+
+Varje grupp får högst 24 timmar. Om matchen är nära delas återstående tid mellan återstående grupper (inklusive aktuell grupp), utan en minimitid som skulle skjuta svarstiden förbi matchstart. Flyttad tidigare matchtid kortar fönstret. Saknas matchtid används 24 timmar. Alla nej går vidare direkt. Vid matchstart, inställd match eller ändrad bemanning stängs sökningen. Admin kan se mottagare och svar, gå vidare, avbryta och tilldela en behörig, tillgänglig familj under pågående sökning.
+
+Övertagandet sker i en databastransaktion med lås per lag och kontroll av ursprunglig tilldelning. Den nya familjen ersätter den gamla på samma tilldelningsrad, vilket uppdaterar Mina pass och statistiken utan dubbelräkning. Övriga inbjudningar stängs och båda familjerna får beständiga besked.
+
+Migration 007 aktiverar [Supabase Cron](https://supabase.com/docs/guides/cron/quickstart) och kör `private.process_replacements()` varje minut, även utan öppna klienter. Migrationen ska köras som databasägare och misslyckas synligt om Cron inte kan aktiveras. Kontrollera efter installation:
+
+```sql
+select jobname, schedule, command, active
+from cron.job where jobname = 'advance-shift-replacements';
+select status, return_message, start_time
+from cron.job_run_details
+where jobid = (select jobid from cron.job where jobname = 'advance-shift-replacements')
+order by start_time desc limit 10;
+```
+
+Jobbet ska vara aktivt och visa lyckade körningar. Förflyttning kan ske upp till ungefär en minut efter deadline. Testerna kör arbetsfunktionen direkt i PGlite; själva pg_cron-installationen och schemalagda körningen behöver verifieras i målprojektet.

@@ -54,6 +54,7 @@ test("Empty-project migrations and team isolation without automatic grants", asy
       "003_player_registration.sql",
       "004_profile_roles.sql",
       "005_family_unavailability.sql",
+      "006_shift_replacements.sql",
     ]) {
       await db.exec(await readFile(`supabase/migrations/${file}`, "utf8"));
     }

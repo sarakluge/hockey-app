@@ -1,3 +1,4 @@
+import ReplacementSearches from "../components/ReplacementSearches";
 import AdminPanel from "../components/AdminPanel";
 import { Box } from "@mui/material";
 import {
@@ -59,6 +60,10 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
 
   return (
     <Box>
+      <AdminPanel>
+        <h2>Ersättarsökningar</h2>
+        <ReplacementSearches app={app} adminView />
+      </AdminPanel>
       <AdminPanel>
         <h2>Spelare</h2>
         <p>
