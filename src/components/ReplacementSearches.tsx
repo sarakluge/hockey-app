@@ -88,6 +88,7 @@ export default function ReplacementSearches({
   const searches = app.data.replacementSearches
     .filter(
       (s) =>
+        (adminView || s.status !== "cancelled") &&
         (!matchId || s.match_id === matchId) &&
         (adminView ||
           !!matchId ||
