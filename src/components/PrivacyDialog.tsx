@@ -32,12 +32,12 @@ export default function PrivacyDialog({ onClose }: { onClose: () => void }) {
       <DialogContent id="privacy-description">
         <DialogContentText component="p" sx={{ mb: 2 }}>
           Appen planerar lagets hemmamatcher och familjernas arbetsuppgifter. Godkända
-          lagmedlemmar kan se familjenamn och bemanning. Endast administratörer kan ändra
+          lagmedlemmar kan se spelarnamn och bemanning. Endast administratörer kan ändra
           uppgifterna.
         </DialogContentText>
         <DialogContentText component="p" sx={{ mb: 2 }}>
-          Vi lagrar e-post, familjekoppling och tilldelade pass. Engångslänkar hanteras av
-          Supabase Auth.
+          Vi lagrar förälderns namn, barnets namn, e-post, spelarkoppling och tilldelade
+          pass. Engångslänkar hanteras av Supabase Auth.
         </DialogContentText>
         <DialogContentText>
           Kontakta lagets administratör för rättelse, utdrag eller radering. Laget behöver

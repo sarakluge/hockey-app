@@ -44,7 +44,7 @@ Föräldrar läser bara godkända lags uppgifter och får inte ändra bemanninge
 1. Använd det nya projektet Seket och välj lämplig databasregion. Skapa inte manuella kopior av appens tabeller i Table Editor.
 2. Låt **Automatically expose new tables** vara **avstängd**. Du behöver inte aktivera den.
 3. Data API behöver vara aktiverat och `public` behöver ingå bland dess exponerade scheman. Detta är en annan inställning än automatiska rättigheter till nya tabeller. `private` ska **inte** läggas till bland exponerade scheman.
-4. Öppna SQL Editor och kör hela `supabase/migrations/001_initial.sql` en gång. Kör därefter hela `supabase/migrations/002_manual_import.sql` en gång. Båda har en egen transaktion med `begin`/`commit`. Hoppa inte över rättighetsdelen i slutet av filerna.
+4. Öppna SQL Editor och kör hela `supabase/migrations/001_initial.sql` en gång. Kör därefter hela `supabase/migrations/002_manual_import.sql` en gång. Kör sedan `supabase/migrations/003_player_registration.sql`. Alla har en egen transaktion med `begin`/`commit`. Hoppa inte över rättighetsdelen i slutet av filerna.
 5. Alternativt kan en projektägare använda Supabase CLI med en granskad projektlänkning och `supabase db push`. Det kör externa ändringar och har inte gjorts som del av denna lokala granskning.
 
 Migrationerna ger **explicita, objektspecifika** rättigheter:
@@ -56,7 +56,7 @@ Migrationerna ger **explicita, objektspecifika** rättigheter:
 
 UUID används utan sekvenser, så inga sekvensgrants behövs. Projektets globala default privileges ändras inte. `GRANT SELECT ON ALL TABLES ...` eller bred `GRANT ALL` behövs inte och ska inte användas för att lösa åtkomstproblem.
 
-Supabase beskriver skillnaden mellan GRANT och RLS här: [automatiska tabellrättigheter och explicita grants](https://supabase.com/changelog/45329-breaking-change-tables-not-exposed-to-data-and-graphql-api-automatically). Om API svarar `42501 permission denied` ska du kontrollera att båda migrationerna körts helt och att rätt roll används, i stället för att öppna tabeller för `anon`.
+Supabase beskriver skillnaden mellan GRANT och RLS här: [automatiska tabellrättigheter och explicita grants](https://supabase.com/changelog/45329-breaking-change-tables-not-exposed-to-data-and-graphql-api-automatically). Om API svarar `42501 permission denied` ska du kontrollera att alla migrationerna körts helt och att rätt roll används, i stället för att öppna tabeller för `anon`.
 
 ## 2. Skapa första föreningen och laget
 
@@ -109,7 +109,7 @@ I Supabase Authentication:
 1. Aktivera e-post/lösenordsinloggning och konfigurera fungerande e-postleverans för riktiga föräldrar. Behåll e-postbekräftelse för nya konton aktiverad och välj en lösenordspolicy som minst motsvarar gränssnittets åtta tecken.
 2. Sätt **Site URL** till frontendens adress, till exempel `https://DITT-NAMN.github.io/hockey-app/`.
 3. Lägg både `https://DITT-NAMN.github.io/hockey-app/` och `https://DITT-NAMN.github.io/hockey-app/?auth=recovery` i tillåtna Redirect URLs. För lokal utveckling lägger du även till `http://127.0.0.1:5173/` och `http://127.0.0.1:5173/?auth=recovery`. Anpassa porten om din devserver använder en annan port.
-4. Välj **Skapa konto**, ange e-post och lösenord, bekräfta e-postadressen via mejlet och logga sedan in med lösenordet. Appen anropar `request_team_access(p_team_id)` och skapar ett **icke godkänt föräldramedlemskap endast i valt lag**. E-post hämtas från Auth i databasen; klienten får inte ange roll, godkännande eller någon annans användar-ID.
+4. Välj **Skapa konto**, ange förälderns namn, barnets namn, e-post och lösenord, bekräfta e-postadressen via mejlet och logga sedan in med lösenordet. Appen anropar `request_team_access(p_team_id)` och skapar ett **icke godkänt föräldramedlemskap endast i valt lag**. E-post hämtas från Auth i databasen; klienten får inte ange roll, godkännande eller någon annans användar-ID.
 
 En begäran ger bara tillgång till eget medlemskap och minimal lag-/föreningsinformation. Matcher, familjer, bemanning och instruktioner förblir stängda tills administratören godkänt medlemskapet. Ingen Auth-trigger tilldelar globala roller eller automatiskt lägger nya användare i alla lag.
 
@@ -138,7 +138,7 @@ Kontrollera att exakt ett medlemskap för rätt lag returneras. Uppdatera appen.
 
 ## 5. Föräldrar och familjekopplingar
 
-Be föräldrar skapa konto och logga in på **rätt lags frontend**. De visas då i det lagets administrativa kö. En inbjudan via e-post skapar inte godkännande; mottagaren behöver följa länken och begära åtkomst i laget. Under Administration väljer du familj, roll och Godkänn. Två vuxna kan kopplas till samma familj i samma lag och ser då familjens pass.
+Be föräldrar skapa konto och logga in på **rätt lags frontend**. De visas då i det lagets administrativa kö. En inbjudan via e-post skapar inte godkännande; mottagaren behöver följa länken och begära åtkomst i laget. Under Administration lägger du först in barnens för- och efternamn under **Spelare**, ett namn per rad. Befintliga namn hoppas över. Ange även vilka uppgifter de vuxna kan bemanna (OVR, klocka och speaker). För varje konto visas förälderns namn, e-post och angivet barnnamn. Välj rätt spelare, roll och Godkänn. Två vuxna kan kopplas till samma familj i samma lag och ser då familjens pass.
 
 Namnen i Excel avser spelare/familjer. Vuxnas identitet och koppling kan inte härledas ur filen och får aldrig gissas. Återkalla medlemskap per lag när en person inte längre ska ha åtkomst. Återkallelse påverkar inte ett annat lags medlemskap.
 
@@ -181,7 +181,7 @@ Publicera genom Supabase Dashboard → Edge Functions → `dispatch-sync` → Co
 
 Administration → Matcher från Swehockey → **Hämta matcher** hämtar, validerar och sparar matcherna direkt. Appen läser om matchlistan och visar antal hämtade hemmamatcher när sparandet är klart. Knappen är avstängd för lag där `sync_enabled` är false. **Uppdatera status och matchlista** läser befintliga databasuppgifter utan en ny Swehockey-hämtning.
 
-Excel- och manuell JSON-import är borttagna ur gränssnittet i första versionen. Befintliga importfunktioner i databasen och parserkod finns kvar för bakåtkompatibilitet och tester, men anropas inte av appen. Familjer och behörigheter behöver tills vidare läggas upp av appansvarig; Swehockey levererar bara matchuppgifter.
+Excel- och manuell JSON-import är borttagna ur gränssnittet i första versionen. Befintliga importfunktioner i databasen och parserkod finns kvar för bakåtkompatibilitet och tester, men anropas inte av appen. Spelare och behörigheter läggs upp under Administration; Swehockey levererar bara matchuppgifter. Tabellen `families` behålls men namnet avser barnet. Ett konto kopplas till en spelare per lag i MVP:n.
 
 Alla sex bemanningsplatser väger lika. Båsdörr 1 och 2 summeras tillsammans. OVR, klocka och speaker kräver motsvarande behörighet. Statistiken räknar alla lagets tilldelningar.
 
@@ -236,7 +236,7 @@ Nya lösenord kräver minst åtta tecken och matchande bekräftelse. Inloggning 
 
 Återställningsmejlet leder till samma appbas med `?auth=recovery`. Den adressen måste vara tillåten under Supabase Authentication → URL Configuration. Appen känner även igen Supabases `PASSWORD_RECOVERY`-händelse. Under återställningen visas inte lagets data eller navigation. En giltig Auth-session krävs för att spara nytt lösenord med `updateUser`; saknad/utgången länk ger möjlighet att begära en ny. Efter sparande loggas den aktuella webbläsarsessionen ut, återställningsmarkören rensas och användaren får logga in med det nya lösenordet.
 
-Återställningsmeddelandet avslöjar inte om en e-postadress har ett konto. Lösenordsåterställning eller registrering ger aldrig rollen ADMIN eller ett godkänt medlemskap; de befintliga lagreglerna gäller även efter inloggning. Detta kräver **ingen SQL-migration**. Vi ändrar inte projektets Auth-inställningar automatiskt. Prova verklig mejlleverans och tillåtna återadresser med ett eget testkonto före föräldralansering.
+Återställningsmeddelandet avslöjar inte om en e-postadress har ett konto. Lösenordsåterställning eller registrering ger aldrig rollen ADMIN eller ett godkänt medlemskap; de befintliga lagreglerna gäller även efter inloggning. Själva lösenordsflödet kräver ingen SQL-migration. Namnfälten vid registrering kräver `003_player_registration.sql`, som kan köras efter 001 och 002 även i en redan provisionerad databas med den aktuella lagmodellen. Befintliga konton får tomma namnfält och visas fortsatt med e-post. Vi ändrar inte projektets Auth-inställningar automatiskt. Prova verklig mejlleverans och tillåtna återadresser med ett eget testkonto före föräldralansering.
 
 `tests/auth.test.ts` kontrollerar basvägar, återställningsmarkörer och lösenordsvalidering. `scripts/auth-browser-check.mjs` testar API-flöden och tillgänglighet med en **fiktiv** Supabase-tjänst; alla externa anrop avbryts eller simuleras. Starta dess separata lokala Vite-testserver så här, utan riktiga nycklar:
 

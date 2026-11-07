@@ -52,6 +52,8 @@ export type Profile = {
   team_id: string;
   id: string;
   email: string;
+  parent_name?: string | null;
+  child_name?: string | null;
   role: "ADMIN" | "PARENT";
   approved: boolean;
   family_id: string | null;

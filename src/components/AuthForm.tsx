@@ -15,6 +15,8 @@ interface AuthFormProps {
 }
 
 export default function AuthForm({ mode, app, onModeChange }: AuthFormProps) {
+  const [parentName, setParentName] = useState("");
+  const [childName, setChildName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
@@ -37,6 +39,10 @@ export default function AuthForm({ mode, app, onModeChange }: AuthFormProps) {
         return;
       }
     }
+    if (mode === "signup" && (!parentName.trim() || !childName.trim())) {
+      setError("Ange ditt namn och barnets namn.");
+      return;
+    }
     setBusy(true);
     try {
       const redirect = authRedirectUrl(window.location.origin, import.meta.env.BASE_URL);
@@ -55,7 +61,10 @@ export default function AuthForm({ mode, app, onModeChange }: AuthFormProps) {
         const { error } = await supabase.auth.signUp({
           email: email.trim(),
           password,
-          options: { emailRedirectTo: redirect },
+          options: {
+            emailRedirectTo: redirect,
+            data: { parent_name: parentName.trim(), child_name: childName.trim() },
+          },
         });
         if (error)
           throw new Error(
@@ -116,6 +125,30 @@ export default function AuthForm({ mode, app, onModeChange }: AuthFormProps) {
       )}
       {!message && (
         <>
+          {mode === "signup" && (
+            <>
+              <TextField
+                label="Ditt namn"
+                required
+                fullWidth
+                autoComplete="name"
+                value={parentName}
+                disabled={busy}
+                onChange={(e) => setParentName(e.target.value)}
+                slotProps={{ htmlInput: { maxLength: 120 } }}
+              />
+              <TextField
+                label="Barnets namn"
+                required
+                fullWidth
+                value={childName}
+                disabled={busy}
+                onChange={(e) => setChildName(e.target.value)}
+                slotProps={{ htmlInput: { maxLength: 120 } }}
+                helperText="Skriv för- och efternamn. Administratören bekräftar kopplingen till rätt spelare."
+              />
+            </>
+          )}
           {mode !== "reset" && (
             <TextField
               label="E-postadress"

@@ -37,7 +37,7 @@ test("Empty-project migrations and team isolation without automatic grants", asy
       create role authenticated;
       create role service_role bypassrls;
       create schema auth;
-      create table auth.users (id uuid primary key, email text);
+      create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb);
       create function auth.uid() returns uuid language sql stable as $$
         select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
       $$;
@@ -48,7 +48,11 @@ test("Empty-project migrations and team isolation without automatic grants", asy
       grant execute on all functions in schema auth to authenticated, anon, service_role;
       alter default privileges revoke execute on functions from public;
     `);
-    for (const file of ["001_initial.sql", "002_manual_import.sql"]) {
+    for (const file of [
+      "001_initial.sql",
+      "002_manual_import.sql",
+      "003_player_registration.sql",
+    ]) {
       await db.exec(await readFile(`supabase/migrations/${file}`, "utf8"));
     }
     await db.exec(`
@@ -148,6 +152,17 @@ test("Empty-project migrations and team isolation without automatic grants", asy
       },
     );
 
+    await db.exec("reset role");
+    await db.query("update auth.users set raw_user_meta_data = $1::jsonb where id = $2", [
+      JSON.stringify({
+        parent_name: " Anna Andersson ",
+        child_name: " Elsa Andersson ",
+        role: "ADMIN",
+        approved: true,
+        family_id: FAMILY_A,
+      }),
+      PENDING_A,
+    ]);
     await t.test(
       "access requests stay pending in one team; no self approval",
       async () => {
@@ -160,6 +175,17 @@ test("Empty-project migrations and team isolation without automatic grants", asy
         assert.equal(profiles.rows.length, 1);
         assert.equal(profiles.rows[0].approved, false);
         assert.equal(profiles.rows[0].role, "PARENT");
+        const identity = await db.query<{
+          parent_name: string;
+          child_name: string;
+          family_id: string | null;
+        }>("select parent_name, child_name, family_id from public.profiles");
+        assert.equal(identity.rows[0].parent_name, "Anna Andersson");
+        assert.equal(identity.rows[0].child_name, "Elsa Andersson");
+        assert.equal(identity.rows[0].family_id, null);
+        await assert.rejects(
+          db.query("update public.profiles set parent_name = 'Ändrat'"),
+        );
         assert.equal((await db.query("select * from public.teams")).rows.length, 1);
         for (const table of [
           "families",

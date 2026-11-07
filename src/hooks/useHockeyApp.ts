@@ -227,6 +227,86 @@ export function useHockeyApp() {
     }
     setBusy(false);
   }
+  async function addPlayers(input: string) {
+    const names = [
+      ...new Set(
+        input
+          .split(/\r?\n/)
+          .map((name) => name.trim())
+          .filter(Boolean),
+      ),
+    ];
+    if (!names.length || names.some((name) => name.length > 120)) {
+      setError("Ange ett spelarnamn per rad, högst 120 tecken per namn.");
+      return false;
+    }
+    const newNames = names.filter((name) => !data.families.some((f) => f.name === name));
+    if (!newNames.length) {
+      notify("Spelarna finns redan i listan.");
+      return true;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      if (demo) {
+        setData((d) => ({
+          ...d,
+          families: [
+            ...d.families,
+            ...newNames.map((name) => ({
+              id: crypto.randomUUID(),
+              name,
+              ovr_ok: false,
+              clock_ok: false,
+              speaker_ok: false,
+            })),
+          ],
+        }));
+      } else {
+        const { error } = await supabase!.from("families").upsert(
+          newNames.map((name) => ({ team_id: configuredTeamId, name })),
+          { onConflict: "team_id,name", ignoreDuplicates: true },
+        );
+        if (error) throw error;
+        await load();
+      }
+      notify("Spelarlistan är sparad.");
+      return true;
+    } catch {
+      setError("Spelarna kunde inte sparas. Försök igen.");
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function updatePlayer(
+    id: string,
+    patch: Partial<Pick<Data["families"][number], "ovr_ok" | "clock_ok" | "speaker_ok">>,
+  ) {
+    if (demo) {
+      setData((d) => ({
+        ...d,
+        families: d.families.map((f) => (f.id === id ? { ...f, ...patch } : f)),
+      }));
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      const { error } = await supabase!
+        .from("families")
+        .update(patch)
+        .eq("team_id", configuredTeamId)
+        .eq("id", id);
+      if (error) throw error;
+      await load();
+      notify("Behörigheten är sparad.");
+    } catch {
+      setError("Behörigheten kunde inte sparas.");
+    } finally {
+      setBusy(false);
+    }
+  }
   async function updateProfile(id: string, patch: Partial<Profile>) {
     if (!supabase || demo) return;
     setBusy(true);
@@ -330,6 +410,8 @@ export function useHockeyApp() {
     startDemo,
     logout,
     assign,
+    addPlayers,
+    updatePlayer,
     updateProfile,
     sync,
     exportData,

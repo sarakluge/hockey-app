@@ -148,6 +148,8 @@ try {
   ).toBeVisible();
 
   await page.getByRole("tab", { name: "Skapa konto", exact: true }).click();
+  await page.getByLabel(/^Ditt namn/).fill("Anna Andersson");
+  await page.getByLabel(/^Barnets namn/).fill("Elsa Andersson");
   await page.getByLabel("E-postadress").fill(user.email);
   await page.getByLabel(/^Lösenord/).fill("valid-test-password");
   await page.getByLabel(/^Bekräfta lösenord/).fill("mismatched-password");
@@ -163,6 +165,8 @@ try {
   const signup = requests.find((r) => r.path === "/auth/v1/signup");
   assert.equal(signup.body.password, "valid-test-password");
   assert.equal(signup.body.data?.role, undefined);
+  assert.equal(signup.body.data?.parent_name, "Anna Andersson");
+  assert.equal(signup.body.data?.child_name, "Elsa Andersson");
 
   await page.getByRole("button", { name: "Tillbaka till inloggning" }).click();
   await page.getByRole("button", { name: "Glömt lösenord?" }).click();

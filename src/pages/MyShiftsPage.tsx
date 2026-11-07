@@ -16,7 +16,7 @@ export default function MyShiftsPage({ app }: { app: HockeyApp }) {
     <Box sx={{ display: "grid", gap: "20px" }}>
       {!app.ownFamily && (
         <Alert severity="info">
-          Administratören behöver koppla ditt konto till rätt familj.
+          Administratören behöver koppla ditt konto till rätt spelare.
         </Alert>
       )}
       {matches.map((match) => {

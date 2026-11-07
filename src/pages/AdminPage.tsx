@@ -2,6 +2,9 @@ import AdminPanel from "../components/AdminPanel";
 import { Box } from "@mui/material";
 import {
   Button,
+  TextField,
+  Checkbox,
+  FormControlLabel,
   Table,
   TableBody,
   TableCell,
@@ -31,6 +34,7 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
     sync,
     exportData,
   } = app;
+  const [playerNames, setPlayerNames] = useState("");
   const [selected, setSelected] = useState("");
   const matches = [...data.matches].sort((first, second) =>
     (first.starts_at || "9999").localeCompare(second.starts_at || "9999"),
@@ -55,6 +59,76 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
 
   return (
     <Box>
+      <AdminPanel>
+        <h2>Spelare</h2>
+        <p>
+          Lägg in barnens för- och efternamn, ett namn per rad. Flera föräldrar kan
+          kopplas till samma spelare.
+        </p>
+        <Box
+          component="form"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            if (await app.addPlayers(playerNames)) setPlayerNames("");
+          }}
+          sx={{ display: "grid", gap: 2 }}
+        >
+          <TextField
+            label="Spelarnamn – ett per rad"
+            multiline
+            minRows={3}
+            value={playerNames}
+            onChange={(e) => setPlayerNames(e.target.value)}
+            required
+            disabled={busy}
+          />
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={busy || !playerNames.trim()}
+          >
+            Lägg till spelare
+          </Button>
+        </Box>
+        {!data.families.length && <p>Inga spelare tillagda ännu.</p>}
+        {[...data.families]
+          .sort((a, b) => a.name.localeCompare(b.name, "sv"))
+          .map((player) => (
+            <Box key={player.id} sx={{ py: 2, borderBottom: "1px solid #dfe6ef" }}>
+              <strong>{player.name}</strong>
+              <Box sx={{ display: "flex", flexWrap: "wrap" }}>
+                {(
+                  [
+                    ["ovr_ok", "OVR"],
+                    ["clock_ok", "Klocka"],
+                    ["speaker_ok", "Speaker/Musik"],
+                  ] as const
+                ).map(([key, label]) => (
+                  <FormControlLabel
+                    key={key}
+                    label={label}
+                    control={
+                      <Checkbox
+                        checked={player[key]}
+                        disabled={busy}
+                        slotProps={{
+                          input: { "aria-label": `${label} för ${player.name}` },
+                        }}
+                        onChange={(e) =>
+                          void app.updatePlayer(player.id, { [key]: e.target.checked })
+                        }
+                      />
+                    }
+                  />
+                ))}
+              </Box>
+            </Box>
+          ))}
+        <p>
+          Behörigheterna gäller de vuxna som bemannar spelarens pass. Markera dem när
+          någon av dem kan uppgiften.
+        </p>
+      </AdminPanel>
       <AdminPanel>
         <Box
           sx={{
@@ -100,8 +174,9 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
           <p>Hämta lagets matcher från Swehockey för att börja bemanna.</p>
         )}
         <Box component="p" sx={{ color: "text.secondary", fontSize: "0.8125rem" }}>
-          OVR, klocka och speaker kan bara tilldelas familjer med motsvarande behörighet.
-          Flera uppgifter till samma familj förutsätter flera vuxna.
+          OVR, klocka och speaker kan bara tilldelas spelare vars föräldrar har
+          motsvarande behörighet. Flera uppgifter till samma spelare förutsätter flera
+          vuxna.
         </Box>
       </AdminPanel>
       <AdminPanel>
@@ -130,10 +205,10 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
           aria-label="Arbetsfördelning, rulla i sidled för alla kolumner"
         >
           <Table size="small">
-            <caption>Antal tilldelade pass per familj i det valda laget.</caption>
+            <caption>Antal tilldelade pass per spelare i det valda laget.</caption>
             <TableHead>
               <TableRow>
-                <TableCell>Familj / spelare</TableCell>
+                <TableCell>Spelare</TableCell>
                 <TableCell>Båsdörr</TableCell>
                 <TableCell>OVR</TableCell>
                 <TableCell>Klocka</TableCell>
@@ -241,8 +316,8 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
         <h2>Användare & godkännande</h2>
         <InviteUser demo={demo} onDone={() => void load()} />
         <Box component="p" sx={{ color: "text.secondary" }}>
-          Be föräldrar logga in en gång. Godkänn sedan kontot och koppla det till rätt
-          familj.
+          Be föräldrar skapa konto och logga in. Kontrollera angivet barnnamn, välj rätt
+          spelare och godkänn sedan kontot.
         </Box>
         {demo ? (
           <p>Riktiga användare visas efter att Supabase har anslutits.</p>
@@ -262,7 +337,14 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
               key={p.id}
             >
               <div>
-                <strong>{p.email}</strong>
+                <strong>{p.parent_name || p.email}</strong>
+                {p.parent_name && <div>{p.email}</div>}
+                <div>
+                  {p.family_id
+                    ? `Förälder till ${data.families.find((f) => f.id === p.family_id)?.name || "okänd spelare"}`
+                    : "Ingen spelarkoppling"}
+                </div>
+                {p.child_name && <div>Angivet barn vid registrering: {p.child_name}</div>}
                 <Box
                   component="p"
                   sx={{ color: "text.secondary", fontSize: "0.8125rem" }}
@@ -272,7 +354,7 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
                 </Box>
               </div>
               <SelectField
-                label={`Familj för ${p.email}`}
+                label={`Spelare för ${p.parent_name || p.email}`}
                 value={p.family_id || ""}
                 disabled={busy}
                 onChange={(e) =>
@@ -281,7 +363,7 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
                   })
                 }
               >
-                <option value="">Ingen familjekoppling</option>
+                <option value="">Ingen spelarkoppling</option>
                 {data.families.map((f) => (
                   <option key={f.id} value={f.id}>
                     {f.name}
