@@ -1,4 +1,4 @@
-import { Box } from "@mui/material";
+import { Alert, Checkbox, FormControlLabel, Box } from "@mui/material";
 import SelectField from "../components/SelectField";
 import { useState } from "react";
 import type { HockeyApp } from "../hooks/useHockeyApp";
@@ -54,9 +54,57 @@ export default function MatchesPage({ app }: { app: HockeyApp }) {
           ))}
         </SelectField>
       </Box>
+      {app.ownFamily ? (
+        <Alert severity="info">
+          Markera de matcher där din familj inte kan bemanna. Valet gäller hela familjen
+          och kan ändras här.
+        </Alert>
+      ) : (
+        <Alert severity="info">
+          Administratören behöver koppla ditt konto till en spelare innan du kan ange
+          familjens tillgänglighet.
+        </Alert>
+      )}
       <Box sx={{ display: "grid", gap: "20px" }}>
         {matches.map((match) => (
-          <MatchCard key={match.id} match={match} data={app.data} />
+          <MatchCard key={match.id} match={match} data={app.data}>
+            {app.ownFamily &&
+              match.status !== "finished" &&
+              match.status !== "cancelled" &&
+              (!match.starts_at || new Date(match.starts_at) >= now) && (
+                <Box sx={{ mt: 2 }}>
+                  <FormControlLabel
+                    label="Min familj är inte tillgänglig"
+                    control={
+                      <Checkbox
+                        checked={app.data.unavailability.some(
+                          (item) =>
+                            item.match_id === match.id &&
+                            item.family_id === app.ownFamily,
+                        )}
+                        disabled={app.busy}
+                        onChange={(event) =>
+                          void app.setUnavailable(match.id, event.target.checked)
+                        }
+                      />
+                    }
+                  />
+                  {app.data.unavailability.some(
+                    (item) =>
+                      item.match_id === match.id && item.family_id === app.ownFamily,
+                  ) &&
+                    app.data.assignments.some(
+                      (item) =>
+                        item.match_id === match.id && item.family_id === app.ownFamily,
+                    ) && (
+                      <Alert severity="warning">
+                        Ni har redan ett pass på denna match. Kontakta administratören för
+                        att ändra bemanningen.
+                      </Alert>
+                    )}
+                </Box>
+              )}
+          </MatchCard>
         ))}
       </Box>
       {!matches.length && (

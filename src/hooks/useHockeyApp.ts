@@ -11,6 +11,7 @@ const EMPTY_DATA: Data = {
   instructions: [],
   logs: [],
   profiles: [],
+  unavailability: [],
 };
 
 export function useHockeyApp() {
@@ -28,6 +29,7 @@ export function useHockeyApp() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const loadVersion = useRef(0);
+  const hasLoadedData = useRef(false);
   const [loading, setLoading] = useState(!!supabase);
   const [busy, setBusy] = useState(false);
   const admin = demo || profile?.role === "ADMIN";
@@ -40,7 +42,8 @@ export function useHockeyApp() {
   async function load() {
     if (!supabase || demo) return;
     const version = ++loadVersion.current;
-    setLoading(true);
+    // Refresh existing data without unmounting pages and losing match/filter state.
+    setLoading(!hasLoadedData.current);
     setError("");
     try {
       const {
@@ -51,6 +54,7 @@ export function useHockeyApp() {
       if (authError && user) throw authError;
       setUserId(user?.id || null);
       if (!user) {
+        hasLoadedData.current = false;
         setProfile(null);
         setData(EMPTY_DATA);
         return;
@@ -85,6 +89,7 @@ export function useHockeyApp() {
       if (pe) throw pe;
       setProfile(p);
       if (!p.approved) {
+        hasLoadedData.current = false;
         setData(EMPTY_DATA);
         return;
       }
@@ -102,6 +107,7 @@ export function useHockeyApp() {
           "assignments",
           "instructions",
           "sync_logs",
+          "family_unavailability",
           ...(p.role === "ADMIN" ? ["profiles"] : []),
         ].map((t) => supabase!.from(t).select("*").eq("team_id", configuredTeamId)),
       );
@@ -117,10 +123,13 @@ export function useHockeyApp() {
         assignments: results[2].data as Data["assignments"],
         instructions: results[3].data as Data["instructions"],
         logs: results[4].data as Data["logs"],
-        profiles: (results[5]?.data || []) as Profile[],
+        unavailability: results[5].data as Data["unavailability"],
+        profiles: (results[6]?.data || []) as Profile[],
       });
+      hasLoadedData.current = true;
     } catch (e) {
       if (version !== loadVersion.current) return;
+      hasLoadedData.current = false;
       setProfile(null);
       setData(EMPTY_DATA);
       setError(e instanceof Error ? e.message : "Data kunde inte hämtas. Försök igen.");
@@ -135,6 +144,7 @@ export function useHockeyApp() {
     const subscription = supabase?.auth.onAuthStateChange((event) => {
       loadVersion.current += 1;
       if (event === "SIGNED_OUT") {
+        hasLoadedData.current = false;
         setProfile(null);
         setUserId(null);
         setData(EMPTY_DATA);
@@ -187,6 +197,7 @@ export function useHockeyApp() {
       return false;
     }
     cancelPasswordRecovery();
+    hasLoadedData.current = false;
     setProfile(null);
     setUserId(null);
     setTeam(null);
@@ -236,6 +247,48 @@ export function useHockeyApp() {
     } catch {
       if (version === loadVersion.current)
         setError("Bemanningen kunde inte sparas. Försök igen.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function setUnavailable(matchId: string, unavailable: boolean) {
+    if (!ownFamily || busy) return;
+    const familyId = ownFamily;
+    const version = loadVersion.current;
+    setBusy(true);
+    setError("");
+    try {
+      if (!demo) {
+        const result = unavailable
+          ? await supabase!
+              .from("family_unavailability")
+              .upsert(
+                { team_id: configuredTeamId, match_id: matchId, family_id: familyId },
+                { onConflict: "team_id,match_id,family_id" },
+              )
+          : await supabase!
+              .from("family_unavailability")
+              .delete()
+              .eq("team_id", configuredTeamId)
+              .eq("match_id", matchId)
+              .eq("family_id", familyId);
+        if (result.error) throw result.error;
+      }
+      if (version !== loadVersion.current) return;
+      setData((d) => ({
+        ...d,
+        unavailability: [
+          ...d.unavailability.filter(
+            (item) => item.match_id !== matchId || item.family_id !== familyId,
+          ),
+          ...(unavailable ? [{ match_id: matchId, family_id: familyId }] : []),
+        ],
+      }));
+      notify("Familjens tillgänglighet är sparad.");
+    } catch {
+      if (version === loadVersion.current)
+        setError("Tillgängligheten kunde inte sparas. Försök igen.");
     } finally {
       setBusy(false);
     }
@@ -450,6 +503,7 @@ export function useHockeyApp() {
     startDemo,
     logout,
     assign,
+    setUnavailable,
     addPlayers,
     updatePlayer,
     updateProfile,

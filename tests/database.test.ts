@@ -53,6 +53,7 @@ test("Empty-project migrations and team isolation without automatic grants", asy
       "002_manual_import.sql",
       "003_player_registration.sql",
       "004_profile_roles.sql",
+      "005_family_unavailability.sql",
     ]) {
       await db.exec(await readFile(`supabase/migrations/${file}`, "utf8"));
     }
@@ -206,6 +207,57 @@ test("Empty-project migrations and team isolation without automatic grants", asy
           (await db.query<{ approved: boolean }>("select approved from public.profiles"))
             .rows[0].approved,
           false,
+        );
+      },
+    );
+
+    await t.test(
+      "family unavailability is shared with admins and scoped to the linked family",
+      async () => {
+        await login("authenticated", PARENT_A);
+        const insert = () =>
+          db.query(
+            "insert into public.family_unavailability values ($1, $2, $3) on conflict (team_id, match_id, family_id) do update set family_id = excluded.family_id",
+            [TEAM_A, "21495:123", FAMILY_A],
+          );
+        await insert();
+        await insert();
+        assert.equal(
+          (await db.query("select * from public.family_unavailability")).rows.length,
+          1,
+        );
+        await assert.rejects(
+          db.query("insert into public.family_unavailability values ($1, $2, $3)", [
+            TEAM_B,
+            "21495:123",
+            FAMILY_B,
+          ]),
+        );
+        await login("authenticated", ADMIN_A);
+        assert.equal(
+          (await db.query("select * from public.family_unavailability")).rows.length,
+          1,
+        );
+        await login("authenticated", ADMIN_B);
+        assert.equal(
+          (await db.query("select * from public.family_unavailability")).rows.length,
+          0,
+        );
+        await login("authenticated", PENDING_A);
+        assert.equal(
+          (await db.query("select * from public.family_unavailability")).rows.length,
+          0,
+        );
+        await assert.rejects(insert());
+        await login("anon");
+        await assert.rejects(db.query("select * from public.family_unavailability"));
+        await login("authenticated", PARENT_A);
+        await db.query("delete from public.family_unavailability where team_id = $1", [
+          TEAM_A,
+        ]);
+        assert.equal(
+          (await db.query("select * from public.family_unavailability")).rows.length,
+          0,
         );
       },
     );

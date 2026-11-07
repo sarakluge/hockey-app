@@ -1,4 +1,4 @@
-import { Box } from "@mui/material";
+import { Alert, Box } from "@mui/material";
 import SelectField from "./SelectField";
 import { DoorOpen, Monitor, Mic, Timer, Users } from "lucide-react";
 import { eligible, ROLES, type Data, type Match, type Role } from "../lib/types";
@@ -22,6 +22,20 @@ interface StaffingProps {
 export default function Staffing({ match, data, busy, onAssign }: StaffingProps) {
   return (
     <Box sx={{ display: "grid", gap: "6px", ...(onAssign ? { my: 2.5 } : {}) }}>
+      {onAssign && data.unavailability.some((item) => item.match_id === match.id) && (
+        <Alert severity="warning">
+          Inte tillgängliga:{" "}
+          {data.families
+            .filter((family) =>
+              data.unavailability.some(
+                (item) => item.match_id === match.id && item.family_id === family.id,
+              ),
+            )
+            .map((family) => family.name)
+            .join(", ")}
+          . Befintliga pass behöver ändras manuellt.
+        </Alert>
+      )}
       {ROLES.map((role) => {
         const assignment = data.assignments.find(
           (item) => item.match_id === match.id && item.role === role,
@@ -75,6 +89,12 @@ export default function Staffing({ match, data, busy, onAssign }: StaffingProps)
                   .map((item) => (
                     <option key={item.id} value={item.id}>
                       {item.name}
+                      {data.unavailability.some(
+                        (entry) =>
+                          entry.match_id === match.id && entry.family_id === item.id,
+                      )
+                        ? " – inte tillgänglig"
+                        : ""}
                     </option>
                   ))}
               </SelectField>

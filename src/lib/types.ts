@@ -81,6 +81,7 @@ export type Data = {
   instructions: Instruction[];
   logs: SyncLog[];
   profiles: Profile[];
+  unavailability: { match_id: string; family_id: string }[];
 };
 
 export function eligible(f: Family, role: string) {

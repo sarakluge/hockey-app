@@ -97,4 +97,5 @@ export const demoData: Data = {
   ],
   logs: [],
   profiles: [],
+  unavailability: [],
 };
