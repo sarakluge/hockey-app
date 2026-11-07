@@ -16,7 +16,7 @@ npm run build
 npm run format:check
 ```
 
-Appen visar inloggningssidan först för utloggade besökare. Utan Supabase-URL och publik nyckel kan du välja ett tydligt märkt demoläge från inloggningssidan. Demomatcher och familjer är fiktiva; ändringar sparas bara i minnet. Import av personuppgifter kan förhandsvisas men aldrig sparas i demoläget. Originalarbetsboken ändras inte.
+Appen visar inloggningssidan först för utloggade besökare. Utan Supabase-URL och publik nyckel kan du välja ett tydligt märkt demoläge från inloggningssidan. Demomatcher och familjer är fiktiva; ändringar sparas bara i minnet. Excel- och JSON-import visas inte i appen. Matchflödet använder Swehockey.
 
 ## Datamodell och isolering
 
@@ -171,49 +171,19 @@ Alla lagets konfigurerade tävlingar måste lämna minst en verifierad hemmamatc
 
 ### Starta synken via appen
 
-Supabase Edge Function `dispatch-sync` kontrollerar sessionen och `is_admin(p_team_id)`, begränsar begäranden per lag till en var femte minut och startar GitHub-workflow med **samma lag-ID**. Den kan inte användas av en administratör för att starta ett annat lags synk.
+Supabase Edge Function `dispatch-sync` hämtar nu scheman **direkt från Swehockey** och sparar alla lagets tävlingar med en enda atomisk `sync_matches`-transaktion. Ingen GitHub-token eller workflow-start behövs för appknappen. Funktionen verifierar session och administratörsbehörighet för exakt begärt lag innan den använder servernyckeln. Laget måste ha `sync_enabled = true` och tävlingar konfigurerade. `request_sync` begränsar manuella hämtningar till en per fem minuter och lag. Om en källa inte går att läsa skrivs inga matchändringar.
 
-Konfigurera vid framtida driftsättning:
+Publicera genom Supabase Dashboard → Edge Functions → `dispatch-sync` → Code. Ersätt hela innehållet med `supabase/functions/dispatch-sync/index.ts` och välj Deploy updates. Filen är avsiktligt fristående för att kunna klistras in i Dashboard. Den använder Supabases inbyggda `SUPABASE_URL`, `SUPABASE_ANON_KEY` och `SUPABASE_SERVICE_ROLE_KEY`; dessa ska inte kopieras till frontend eller skapas som egna secrets. Den egna inställningen `APP_ORIGIN` anger appens tillåtna origin (utan avslutande snedstreck); kommaseparerade adresser stöds. Lokala adresser på localhost/127.0.0.1, port 5173 och 5174, ingår redan.
 
-- `GITHUB_DISPATCH_TOKEN`: GitHub fine-grained token endast för detta repo, med Actions Read and write.
-- `GITHUB_REPOSITORY`: `sarakluge/hockey-app`.
-- `APP_ORIGIN`: frontendens origin utan sökväg, exempelvis `https://DITT-NAMN.github.io`. För lokal funktionstestning använder du rätt lokal origin. Nuvarande funktion har en konfigurerad origin; flera olika domäner behöver en granskad allowlist i en framtida utbyggnad.
+`GITHUB_DISPATCH_TOKEN` och `GITHUB_REPOSITORY` behövs inte längre i Edge Functions. GitHub-jobbet finns kvar som separat, valfri schemalagd serverhämtning var sjätte timme; det använder fortfarande repository secrets enligt ovan. Direkthämtningen i appen kräver inte detta jobb. Ingen ny SQL-migration behövs. Funktionen är ännu inte publicerad genom denna lokala ändring.
 
-Projektägaren kan sedan deploya funktionen med Supabase CLI (`supabase functions deploy dispatch-sync`) efter inloggning och kontrollerad projektlänkning. Ingen funktion har deployats av denna granskning. Alternativt kan en repoansvarig alltid starta workflow från GitHub.
+## Enkelt matchflöde
 
-## Excel-import och rättvis fördelning
+Administration → Matcher från Swehockey → **Hämta matcher** hämtar, validerar och sparar matcherna direkt. Appen läser om matchlistan och visar antal hämtade hemmamatcher när sparandet är klart. Knappen är avstängd för lag där `sync_enabled` är false. **Uppdatera status och matchlista** läser befintliga databasuppgifter utan en ny Swehockey-hämtning.
 
-Kör en lyckad synk eller manuell matchimport för **aktuellt lag** först. Välj sedan en privat kopia av Excel-filen i Administration. Appen läser schema, spelar-/behörighetslista och hallinstruktioner lokalt i webbläsaren. Högst 5 MB; originalet laddas inte upp eller ändras.
+Excel- och manuell JSON-import är borttagna ur gränssnittet i första versionen. Befintliga importfunktioner i databasen och parserkod finns kvar för bakåtkompatibilitet och tester, men anropas inte av appen. Familjer och behörigheter behöver tills vidare läggas upp av appansvarig; Swehockey levererar bara matchuppgifter.
 
-Förhandsvisningen föreslår matchning utifrån datum och exakt motståndare men kräver att varje rad kontrolleras mot tävling, matchnummer, tid och arena. Oklara matchningar måste väljas manuellt. Samma match kan inte väljas för flera Excel-rader. Familjer matchas efter exakt namn **inom valt lag**. Granska även instruktionerna; de kan innehålla privata koder.
-
-Godkänn uttryckligen personuppgifterna före sparande. RPC `import_excel(p_team_id, p_data)` kontrollerar lagets administratör, matchkopplingar och uppgiftsbehörigheter. Importen är atomisk och upprepning av samma data skapar inga dubletter. Befintlig motstridig bemanning avbryter hela importen. Behörighetsflaggor/instruktioner uppdateras från den godkända filen. Ett lags import rör inte ett annat lags familjer med samma namn.
-
-Alla sex platser väger lika. Båsdörr 1 och 2 summeras tillsammans. OVR, klocka och speaker kräver Ja-flaggor. Inga vikter, kvoter eller tysta undantag har hittats i originalet. Vissa ursprungliga uppdrag motsvarar inte behörighetsflaggorna; rätta vid behov en privat kopia i samråd med laget. Flera uppgifter till samma familj behöver flera tillgängliga vuxna. Statistiken räknar alla lagets importerade tilldelningar, inte arbetade timmar eller endast en vald säsong.
-
-## Manuell matchimport vid källproblem
-
-Administration → Manuell matchimport. Klistra in en lista av verifierade matchobjekt och bekräfta källkontrollen. **Detta är en mall med platshållare**, inte verkliga matchdata:
-
-```json
-[
-  {
-    "id": "TÄVLINGSNUMMER:OFFICIELLT_MATCHNUMMER",
-    "competition": "TÄVLINGSNUMMER",
-    "source_id": "OFFICIELLT_MATCHNUMMER",
-    "starts_at": "ÅÅÅÅ-MM-DDTHH:MM:00+01:00",
-    "home_team": "LAGETS_EXAKTA_HEMMALAGSNAMN",
-    "away_team": "VERIFIERAT_MOTSTÅNDARLAG",
-    "arena": "VERIFIERAD_ARENA",
-    "status": "scheduled",
-    "needs_review": false
-  }
-]
-```
-
-Match- och tävlingsnummer måste vara numeriska och tävlingen måste vara konfigurerad för laget. `source_id` är det stabila matchnumret i matchtidens tooltip, inte `/Game/Events/...`-länkens ID. Tider behöver explicit tidszon, `+01:00` vintertid och `+02:00` sommartid i Stockholm, eller UTC `Z`. Använd `starts_at: null` och `needs_review: true` för obekräftad tid. Status är `scheduled`, `finished`, `postponed` eller `cancelled`.
-
-RPC `manual_matches(p_team_id, p_matches)` kan bara köras av administratör i valt lag. Den bevarar bemanning, loggar ändringar och markerar inga andra matcher som saknade. Nästa lyckade synk återställer källans uppgifter. Manuella importer räknas inte som lyckad automatisk synk. JSON-export från appen omfattar bara det laddade lagets data och ska förvaras privat.
+Alla sex bemanningsplatser väger lika. Båsdörr 1 och 2 summeras tillsammans. OVR, klocka och speaker kräver motsvarande behörighet. Statistiken räknar alla lagets tilldelningar.
 
 ## Testning och kvarvarande verifiering
 
@@ -244,7 +214,7 @@ PGlite ersätter inte Supabase Auth eller PostgREST. Inställningen Automaticall
 - `src/lib/swehockey.ts`: strikt HTML-parser med Stockholm-tider.
 - `scripts/sync.ts`: lagkonfigurerad serversynk med hemligheter endast i miljön.
 - `supabase/migrations/`: fullständiga initialmigrationer, RLS, grants och atomiska RPC-funktioner.
-- `supabase/functions/dispatch-sync/`: autentiserad, lagbegränsad workflow-start.
+- `supabase/functions/dispatch-sync/`: autentiserad, lagbegränsad direkthämtning från Swehockey.
 
 Kör `npm run format` för läsbara radbrytningar/indrag och `npm run format:check` för kontroll. `.editorconfig` och `.prettierrc.json` innehåller inställningarna. SQL-migrationerna är formaterade separat med läsbara block. Redigera aldrig komprimerade byggfiler i `dist/`.
 
@@ -256,7 +226,7 @@ Använd MUI:s `Button`, `TextField`, `Card`, `Alert`, `Accordion`, `Dialog`, `Ta
 
 Integritetsdialogen använder MUI:s fokuslås och återställer fokus vid stängning. Navigation och ikonknappar har tillgängliga namn; en hoppa-till-innehåll-länk kan nås med tangentbord. Den breda fördelningstabellen är tangentbordsfokuserbar och kan rullas i sidled. Kontrollera fortfarande innehåll, nya flöden, skärmläsning och zoom manuellt; ett komponentbibliotek garanterar inte i sig att appen uppfyller alla riktlinjer.
 
-Administration, informationssidan och Excel-läsning laddas vid behov. MUI och Supabase byggs som separata cachebara paketdelar. Inga databasändringar behövs för MUI-bytet.
+Administration och informationssidan laddas vid behov. MUI och Supabase byggs som separata cachebara paketdelar. Inga databasändringar behövs för MUI-bytet.
 
 ## Inloggning, nya konton och lösenordsåterställning
 

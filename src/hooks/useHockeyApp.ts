@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { supabase, configuredTeamId } from "../lib/supabase";
 import { demoData } from "../lib/demo";
 import type { Data, Profile, Role, Team, Competition } from "../lib/types";
-import { type ImportPreview } from "../lib/excel";
 import { isPasswordRecoveryUrl, clearPasswordRecoveryUrl } from "../lib/auth";
 
 const EMPTY_DATA: Data = {
@@ -30,8 +29,6 @@ export function useHockeyApp() {
   const [error, setError] = useState("");
   const loadVersion = useRef(0);
   const [loading, setLoading] = useState(!!supabase);
-  const [preview, setPreview] = useState<ImportPreview | null>(null);
-  const [importApproved, setImportApproved] = useState(false);
   const [busy, setBusy] = useState(false);
   const admin = demo || profile?.role === "ADMIN";
   const ownFamily = demo ? "demo-family-2" : profile?.family_id;
@@ -252,58 +249,40 @@ export function useHockeyApp() {
     }
     setBusy(true);
     setError("");
-    const { data: result, error } = await supabase!.functions.invoke("dispatch-sync", {
-      body: { team_id: configuredTeamId },
-    });
-    setBusy(false);
-    if (error)
-      setError(
-        "Synken kunde inte startas. Kontrollera Edge Function eller starta sync.yml i GitHub Actions.",
-      );
-    else notify(result.message);
-  }
-  async function readFile(file?: File) {
-    if (!file) return;
-    setBusy(true);
-    setPreview(null);
-    setImportApproved(false);
-    setError("");
     try {
-      const { previewExcel } = await import("../lib/excel");
-      setPreview(await previewExcel(file, data.matches));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Kunde inte läsa filen");
+      const { data: sessionData, error: sessionError } =
+        await supabase!.auth.getSession();
+      if (sessionError || !sessionData.session?.access_token) {
+        setError(
+          "Din inloggning saknas eller har gått ut. Logga in igen för att hämta matcher.",
+        );
+        return;
+      }
+      const { data: result, error } = await supabase!.functions.invoke("dispatch-sync", {
+        headers: { Authorization: `Bearer ${sessionData.session.access_token}` },
+        body: { team_id: configuredTeamId },
+      });
+      if (error) {
+        if (error.context instanceof Response) {
+          const details = await error.context.json().catch(() => null);
+          if (typeof details?.message === "string") {
+            setError(details.message);
+            return;
+          }
+        }
+        throw error;
+      }
+      await load();
+      notify(result?.message || "Matcherna är uppdaterade. Bemanningen finns kvar.");
+    } catch {
+      setError(
+        "Matchhämtningen kunde inte startas. Försök igen senare. Kontakta appansvarig om problemet kvarstår. Befintliga matcher och bemanning finns kvar.",
+      );
     } finally {
       setBusy(false);
     }
   }
-  async function importData() {
-    if (
-      !preview ||
-      !importApproved ||
-      preview.rows.some((r) => !r.match_id || !r.confirmed)
-    )
-      return;
-    if (demo) {
-      setError(
-        "Import av personuppgifter är avstängd i demoläget. Förhandsvisningen sparas inte.",
-      );
-      return;
-    }
-    setBusy(true);
-    const { error } = await supabase!.rpc("import_excel", {
-      p_team_id: configuredTeamId,
-      p_data: preview,
-    });
-    if (error) setError(error.message);
-    else {
-      setPreview(null);
-      setImportApproved(false);
-      notify("Importen är klar.");
-      await load();
-    }
-    setBusy(false);
-  }
+
   function exportData() {
     const blob = new Blob(
       [
@@ -346,10 +325,6 @@ export function useHockeyApp() {
     busy,
     admin,
     ownFamily,
-    preview,
-    setPreview,
-    importApproved,
-    setImportApproved,
     notify,
     load,
     startDemo,
@@ -357,8 +332,6 @@ export function useHockeyApp() {
     assign,
     updateProfile,
     sync,
-    readFile,
-    importData,
     exportData,
   };
 }
