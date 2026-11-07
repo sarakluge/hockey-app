@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase, configuredTeamId } from "../lib/supabase";
 import { demoData, replacementPreviewData } from "../lib/demo";
-import type { Data, Profile, Role, Team, Competition } from "../lib/types";
+import type { Assignment, Data, Profile, Role, Team, Competition } from "../lib/types";
 import { isPasswordRecoveryUrl, clearPasswordRecoveryUrl } from "../lib/auth";
 
 const EMPTY_DATA: Data = {
@@ -279,7 +279,52 @@ export function useHockeyApp() {
     setDemo(false);
     return true;
   }
+  async function publishSchedule(expected: Assignment[], proposal: Assignment[]) {
+    if (!admin || busy) return false;
+    setBusy(true);
+    setError("");
+    const normalize = (rows: Assignment[]) =>
+      rows.map(({ match_id, role, family_id, locked }) => ({
+        match_id,
+        role,
+        family_id,
+        locked: !!locked,
+      }));
+    try {
+      if (!demo) {
+        const { error } = await supabase!.rpc("publish_schedule", {
+          p_team_id: configuredTeamId,
+          p_expected: normalize(expected),
+          p_proposal: normalize(proposal),
+        });
+        if (error) throw error;
+      }
+      setData((d) => ({ ...d, assignments: proposal }));
+      notify("Schemat är publicerat.");
+      return true;
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Publiceringen misslyckades. Uppdatera och skapa ett nytt förslag.",
+      );
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function assign(matchId: string, role: Role, familyId: string) {
+    const current = data.assignments.find(
+      (a) => a.match_id === matchId && a.role === role,
+    );
+    const match = data.matches.find((m) => m.id === matchId);
+    if (
+      current?.locked ||
+      match?.status === "finished" ||
+      (match?.starts_at && Date.parse(match.starts_at) <= Date.now())
+    )
+      return;
     setError("");
     if (demo) {
       setData((d) => ({
@@ -422,7 +467,12 @@ export function useHockeyApp() {
   }
   async function updatePlayer(
     id: string,
-    patch: Partial<Pick<Data["families"][number], "ovr_ok" | "clock_ok" | "speaker_ok">>,
+    patch: Partial<
+      Pick<
+        Data["families"][number],
+        "ovr_ok" | "clock_ok" | "speaker_ok" | "staffing_exempt"
+      >
+    >,
   ) {
     if (demo) {
       setData((d) => ({
@@ -577,6 +627,7 @@ export function useHockeyApp() {
     startDemo,
     logout,
     assign,
+    publishSchedule,
     setUnavailable,
     replacementAction,
     addPlayers,

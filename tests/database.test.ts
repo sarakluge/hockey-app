@@ -680,6 +680,150 @@ test("Empty-project migrations and team isolation without automatic grants", asy
         );
       },
     );
+    await root();
+    await db.exec(await readFile("supabase/migrations/008_scheduling.sql", "utf8"));
+    await db.exec(
+      await readFile("supabase/migrations/009_manual_multiple_positions.sql", "utf8"),
+    );
+    await t.test(
+      "schedule publication is atomic, admin-only and detects stale proposals",
+      async () => {
+        await root();
+        const snapshot = async () =>
+          (
+            await db.query<{ rows: unknown }>(
+              `select coalesce(jsonb_agg(jsonb_build_object('match_id',match_id,'role',role,'family_id',family_id,'locked',locked)), '[]') as rows from public.assignments where team_id='${TEAM_A}'`,
+            )
+          ).rows[0].rows;
+        const before = await snapshot();
+        await login("authenticated", ADMIN_A);
+        await db.query("select public.publish_schedule($1,$2,$3)", [
+          TEAM_A,
+          JSON.stringify(before),
+          JSON.stringify(before),
+        ]);
+        await assert.rejects(
+          db.query("select public.publish_schedule($1,$2,$3)", [
+            TEAM_A,
+            "[]",
+            JSON.stringify(before),
+          ]),
+        );
+        await login("authenticated", PARENT_A);
+        await assert.rejects(
+          db.query("select public.publish_schedule($1,$2,$3)", [
+            TEAM_A,
+            JSON.stringify(before),
+            JSON.stringify(before),
+          ]),
+        );
+        await root();
+        assert.deepEqual(await snapshot(), before);
+      },
+    );
+    await t.test(
+      "admin may publish manually chosen multiple positions; automatic duplicates fail",
+      async () => {
+        await root();
+        const family = (
+          await db.query<{ id: string }>(
+            "insert into public.families(team_id,name) values ($1,'Manuell flerbemanning') returning id",
+            [TEAM_A],
+          )
+        ).rows[0].id;
+        await db.query(
+          "insert into public.matches(team_id,id,competition,source_id,starts_at,home_team,away_team,arena,status) values ($1,'21495:9999','21495','9999',now()+interval '1 year','Testlag A','B','A','scheduled')",
+          [TEAM_A],
+        );
+        const before = (
+          await db.query<{ rows: unknown[] }>(
+            "select coalesce(jsonb_agg(jsonb_build_object('match_id',match_id,'role',role,'family_id',family_id,'locked',locked)), '[]') as rows from public.assignments where team_id=$1",
+            [TEAM_A],
+          )
+        ).rows[0].rows;
+        const additions = ["Båsdörr 1", "Båsdörr 2"].map((role) => ({
+          match_id: "21495:9999",
+          role,
+          family_id: family,
+          locked: false,
+        }));
+        await login("authenticated", ADMIN_A);
+        await assert.rejects(
+          db.query("select public.publish_schedule($1,$2,$3)", [
+            TEAM_A,
+            JSON.stringify(before),
+            JSON.stringify([...before, ...additions]),
+          ]),
+        );
+        additions[1].locked = true;
+        await db.query("select public.publish_schedule($1,$2,$3)", [
+          TEAM_A,
+          JSON.stringify(before),
+          JSON.stringify([...before, ...additions]),
+        ]);
+        assert.equal(
+          (await db.query("select * from public.assignments where match_id='21495:9999'"))
+            .rows.length,
+          2,
+        );
+      },
+    );
+    await root();
+    await db.exec(await readFile("supabase/migrations/010_staffing_exempt.sql", "utf8"));
+    await t.test(
+      "exempt families are excluded automatically but admin can assign them",
+      async () => {
+        await root();
+        const family = (
+          await db.query<{ id: string }>(
+            "insert into public.families(team_id,name,staffing_exempt) values ($1,'Tränarfamilj',true) returning id",
+            [TEAM_A],
+          )
+        ).rows[0].id;
+        const eligible = (
+          await db.query<{ automatic: boolean; manual: boolean }>(
+            "select private.replacement_eligible($1,'21495:9999','Matchvärd',$2) as automatic, private.replacement_eligible($1,'21495:9999','Matchvärd',$2,true) as manual",
+            [TEAM_A, family],
+          )
+        ).rows[0];
+        assert.equal(eligible.automatic, false);
+        assert.equal(eligible.manual, true);
+        const before = (
+          await db.query<{ rows: unknown[] }>(
+            "select coalesce(jsonb_agg(jsonb_build_object('match_id',match_id,'role',role,'family_id',family_id,'locked',locked)), '[]') as rows from public.assignments where team_id=$1",
+            [TEAM_A],
+          )
+        ).rows[0].rows;
+        const addition = {
+          match_id: "21495:9999",
+          role: "Matchvärd",
+          family_id: family,
+          locked: false,
+        };
+        await login("authenticated", ADMIN_A);
+        await assert.rejects(
+          db.query("select public.publish_schedule($1,$2,$3)", [
+            TEAM_A,
+            JSON.stringify(before),
+            JSON.stringify([...before, addition]),
+          ]),
+        );
+        addition.locked = true;
+        await db.query("select public.publish_schedule($1,$2,$3)", [
+          TEAM_A,
+          JSON.stringify(before),
+          JSON.stringify([...before, addition]),
+        ]);
+        assert.equal(
+          (
+            await db.query("select * from public.assignments where family_id=$1", [
+              family,
+            ])
+          ).rows.length,
+          1,
+        );
+      },
+    );
   } finally {
     await db.close();
   }

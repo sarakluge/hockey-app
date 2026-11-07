@@ -27,6 +27,9 @@ test("replacement searches enforce ownership, eligibility, priority and atomic h
       "004_profile_roles.sql",
       "005_family_unavailability.sql",
       "006_shift_replacements.sql",
+      "008_scheduling.sql",
+      "009_manual_multiple_positions.sql",
+      "010_staffing_exempt.sql",
     ]) {
       await db.exec(await readFile(`supabase/migrations/${file}`, "utf8"));
     }

@@ -1,3 +1,4 @@
+import SeasonSchedule from "../components/SeasonSchedule";
 import ReplacementSearches from "../components/ReplacementSearches";
 import AdminPanel from "../components/AdminPanel";
 import { Box } from "@mui/material";
@@ -64,6 +65,7 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
 
   return (
     <Box>
+      <SeasonSchedule app={app} />
       <AdminPanel
         title="Ersättarsökningar"
         summary={`${activeSearches} pågående`}
@@ -100,8 +102,8 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
         )}
         <Box component="p" sx={{ color: "text.secondary", fontSize: "0.8125rem" }}>
           OVR, klocka och speaker kan bara tilldelas spelare vars föräldrar har
-          motsvarande behörighet. Flera uppgifter till samma spelare förutsätter flera
-          vuxna.
+          motsvarande behörighet. Schemageneratorn tilldelar högst ett pass per familj och
+          match.
         </Box>
       </AdminPanel>
       <AdminPanel title="Spelare" summary={`${data.families.length}`}>
@@ -143,6 +145,10 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
               <Box sx={{ display: "flex", flexWrap: "wrap" }}>
                 {(
                   [
+                    [
+                      "staffing_exempt",
+                      "Undantagen från schema och ersättarförfrågningar",
+                    ],
                     ["ovr_ok", "OVR"],
                     ["clock_ok", "Klocka"],
                     ["speaker_ok", "Speaker/Musik"],
@@ -169,8 +175,9 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
             </Box>
           ))}
         <p>
-          Behörigheterna gäller de vuxna som bemannar spelarens pass. Markera dem när
-          någon av dem kan uppgiften.
+          Undantagna familjer kan fortfarande tilldelas pass manuellt av admin. Befintliga
+          pass behålls. Behörigheterna gäller de vuxna som bemannar spelarens pass.
+          Markera dem när någon av dem kan uppgiften.
         </p>
       </AdminPanel>
       <AdminPanel title="Rättvis fördelning" summary="Alla lagets matcher">

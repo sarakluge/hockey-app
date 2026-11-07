@@ -41,12 +41,18 @@ export type Match = {
 export type Family = {
   id: string;
   name: string;
+  staffing_exempt?: boolean;
   ovr_ok: boolean;
   clock_ok: boolean;
   speaker_ok: boolean;
 };
 
-export type Assignment = { match_id: string; role: Role; family_id: string };
+export type Assignment = {
+  match_id: string;
+  role: Role;
+  family_id: string;
+  locked?: boolean;
+};
 
 export type Profile = {
   team_id: string;

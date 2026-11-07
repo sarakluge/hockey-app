@@ -80,7 +80,12 @@ export default function Staffing({ match, data, busy, onAssign }: StaffingProps)
               <SelectField
                 label={role}
                 value={family?.id || ""}
-                disabled={busy}
+                disabled={
+                  busy ||
+                  !!assignment?.locked ||
+                  match.status === "finished" ||
+                  (!!match.starts_at && Date.parse(match.starts_at) <= Date.now())
+                }
                 onChange={(event) => void onAssign(match.id, role, event.target.value)}
               >
                 <option value="">Ej tillsatt</option>
