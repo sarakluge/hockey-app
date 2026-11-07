@@ -1,3 +1,4 @@
+import { Button, Checkbox, FormControlLabel, Paper, TextField } from "@mui/material";
 import { useState } from "react";
 import { supabase, configuredTeamId } from "../lib/supabase";
 
@@ -57,16 +58,18 @@ export default function ManualImport({
     }
   }
   return (
-    <section className="panel">
+    <Paper component="section" variant="outlined" className="panel">
       <h2>Manuell matchimport · reservlösning</h2>
       <p className="muted">
         Om Swehockey inte kan läsas: klistra in verifierade matchdata som JSON enligt
         README. Matchnummer och tävling måste komma från officiell källa. Inga matchningar
         görs utifrån datum.
       </p>
-      <textarea
+      <TextField
+        multiline
+        fullWidth
+        label="Manuella matchdata i JSON"
         rows={6}
-        aria-label="Manuella matchdata i JSON"
         placeholder='[{"id":"21495:OFFICIELLT_MATCHNUMMER", ...}]'
         value={text}
         onChange={(e) => {
@@ -74,23 +77,26 @@ export default function ManualImport({
           setApproved(false);
         }}
       />
-      <label className="check-label">
-        <input
-          type="checkbox"
-          checked={approved}
-          onChange={(e) => setApproved(e.target.checked)}
-        />
-        Jag har verifierat matchnummer, tävling, lag och tider mot källan. Befintliga
-        matchuppgifter får uppdateras.
-      </label>
-      <button
-        className="button secondary"
+      <FormControlLabel
+        control={
+          <Checkbox checked={approved} onChange={(e) => setApproved(e.target.checked)} />
+        }
+        label={
+          <>
+            {" "}
+            Jag har verifierat matchnummer, tävling, lag och tider mot källan. Befintliga
+            matchuppgifter får uppdateras.
+          </>
+        }
+      />
+      <Button
+        variant="outlined"
         disabled={!approved || !text || busy}
         onClick={() => void save()}
       >
         Validera och spara matchdata
-      </button>
+      </Button>
       {result && <p role="status">{result}</p>}
-    </section>
+    </Paper>
   );
 }

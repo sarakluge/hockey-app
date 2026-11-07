@@ -1,4 +1,5 @@
-import { MapPin, AlertCircle } from "lucide-react";
+import { Alert, Card, Divider, Typography } from "@mui/material";
+import { MapPin } from "lucide-react";
 import type { ReactNode } from "react";
 import { formatDate, type Data, type Match } from "../lib/types";
 import Badge from "./Badge";
@@ -32,9 +33,14 @@ export default function MatchCard({
     : "– – : – –";
 
   return (
-    <article className={showStaffing ? "match-card" : "match-card shift-card"}>
+    <Card
+      component="article"
+      className={showStaffing ? "match-card" : "match-card shift-card"}
+    >
       <div className="match-date-row">
-        <h2>{date.charAt(0).toUpperCase() + date.slice(1)}</h2>
+        <Typography variant="h2" sx={{ fontSize: { xs: "1rem", sm: "1.2rem" } }}>
+          {date.charAt(0).toUpperCase() + date.slice(1)}
+        </Typography>
         <Badge tone={isDm ? "purple" : ""}>{isDm ? "DM" : "Serie"}</Badge>
       </div>
       <div className="match-overview">
@@ -53,21 +59,23 @@ export default function MatchCard({
         {statuses[match.status] && <Badge tone="amber">{statuses[match.status]}</Badge>}
         {match.changed_at && <Badge tone="amber">Ändrad matchinfo</Badge>}
         {(match.needs_review || match.missing_from_source) && (
-          <p className="match-warning">
-            <AlertCircle size={16} />
+          <Alert severity="warning" sx={{ mt: 1, width: "100%" }}>
             {match.missing_from_source
               ? "Saknas i källan. Bemanningen är bevarad."
               : "Matchtiden behöver kontrolleras."}
-          </p>
+          </Alert>
         )}
       </div>
       {showStaffing && (
-        <section className="match-staffing">
-          <h3>Bemanning</h3>
-          <Staffing match={match} data={data} />
-        </section>
+        <>
+          <Divider sx={{ my: 1.5 }} />
+          <section className="match-staffing">
+            <h3>Bemanning</h3>
+            <Staffing match={match} data={data} />
+          </section>
+        </>
       )}
       {children}
-    </article>
+    </Card>
   );
 }

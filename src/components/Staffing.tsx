@@ -1,3 +1,4 @@
+import SelectField from "./SelectField";
 import { DoorOpen, Monitor, Mic, Timer, Users } from "lucide-react";
 import { eligible, ROLES, type Data, type Match, type Role } from "../lib/types";
 
@@ -32,8 +33,8 @@ export default function Staffing({ match, data, busy, onAssign }: StaffingProps)
             <Icon size={21} aria-hidden="true" />
             <span className="staffing-role">{role}</span>
             {onAssign ? (
-              <select
-                aria-label={role}
+              <SelectField
+                label={role}
                 value={family?.id || ""}
                 disabled={busy}
                 onChange={(event) => void onAssign(match.id, role, event.target.value)}
@@ -46,7 +47,7 @@ export default function Staffing({ match, data, busy, onAssign }: StaffingProps)
                       {item.name}
                     </option>
                   ))}
-              </select>
+              </SelectField>
             ) : (
               <span className="staffing-name">{family?.name || "Ej tillsatt"}</span>
             )}

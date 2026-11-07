@@ -1,3 +1,4 @@
+import AxeBuilder from "@axe-core/playwright";
 import { chromium, expect } from "@playwright/test";
 import assert from "node:assert/strict";
 
@@ -7,10 +8,11 @@ const browser = await chromium.launch({
     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
   headless: true,
 });
-const page = await browser.newPage({
+const context = await browser.newContext({
   viewport: { width: 390, height: 844 },
   reducedMotion: "reduce",
 });
+const page = await context.newPage();
 const baseUrl = process.env.APP_URL || "http://127.0.0.1:5173";
 const errors = [];
 page.on("pageerror", (error) => errors.push(error.message));
@@ -51,9 +53,48 @@ try {
   await page.getByText("Kontakt & övrigt", { exact: true }).click();
   await page.getByRole("button", { name: "Integritet & personuppgifter" }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
-  await page.getByRole("button", { name: "Jag förstår" }).click();
+  const dialogAccessibility = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+    .analyze();
+  assert.deepEqual(
+    dialogAccessibility.violations.map((item) => ({
+      id: item.id,
+      nodes: item.nodes.map((node) => node.target),
+    })),
+    [],
+    "Dialog accessibility",
+  );
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Integritet & personuppgifter" }),
+  ).toBeFocused();
   await page.screenshot({ path: "/tmp/hemmaplan-info.png", fullPage: true });
 
+  for (const route of ["matcher", "mina", "instruktioner", "admin"]) {
+    await page.goto(`${baseUrl}/#${route}`);
+    await expect(page.locator("h1")).toBeVisible();
+    await expect(
+      page.locator(
+        route === "admin"
+          ? ".admin-page"
+          : route === "instruktioner"
+            ? ".info-list"
+            : ".match-list",
+      ),
+    ).toBeVisible();
+    const accessibility = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+      .analyze();
+    assert.deepEqual(
+      accessibility.violations.map((item) => ({
+        id: item.id,
+        nodes: item.nodes.map((node) => node.target),
+      })),
+      [],
+      `Accessibility: ${route}`,
+    );
+  }
   for (const width of [320, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     for (const route of ["matcher", "mina", "instruktioner", "admin"]) {

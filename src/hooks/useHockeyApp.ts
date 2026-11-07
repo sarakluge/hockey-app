@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase, configuredTeamId } from "../lib/supabase";
 import { demoData } from "../lib/demo";
 import type { Data, Profile, Role, Team, Competition } from "../lib/types";
-import { previewExcel, type ImportPreview } from "../lib/excel";
+import { type ImportPreview } from "../lib/excel";
 
 const EMPTY_DATA: Data = {
   matches: [],
@@ -235,6 +235,7 @@ export function useHockeyApp() {
     setImportApproved(false);
     setError("");
     try {
+      const { previewExcel } = await import("../lib/excel");
       setPreview(await previewExcel(file, data.matches));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Kunde inte läsa filen");

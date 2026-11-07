@@ -1,3 +1,4 @@
+import { Button, TextField } from "@mui/material";
 import { useState } from "react";
 import { Mail } from "lucide-react";
 import { supabase } from "../lib/supabase";
@@ -35,9 +36,9 @@ export default function InviteUser({
   }
   return (
     <form className="invite-form" onSubmit={invite}>
-      <label htmlFor="invite-email">Bjud in förälder med engångslänk</label>
       <div className="action-row">
-        <input
+        <TextField
+          label="Bjud in förälder med engångslänk"
           id="invite-email"
           type="email"
           required
@@ -45,10 +46,10 @@ export default function InviteUser({
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
-        <button className="button secondary" disabled={busy || demo}>
+        <Button type="submit" variant="outlined" disabled={busy || demo}>
           <Mail size={16} />
           Skicka inbjudan
-        </button>
+        </Button>
       </div>
       {message && <p role="status">{message}</p>}
     </form>

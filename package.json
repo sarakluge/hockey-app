@@ -13,17 +13,19 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/material": "^9.5.0",
     "@supabase/supabase-js": "^2.57.0",
-    "@tailwindcss/vite": "^4.1.13",
     "cheerio": "^1.1.2",
     "date-fns-tz": "^3.2.0",
     "lucide-react": "^0.468.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "read-excel-file": "^6.0.1",
-    "tailwindcss": "^4.1.13"
+    "read-excel-file": "^6.0.1"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@electric-sql/pglite": "^0.5.15",
     "@playwright/test": "^1.64.1",
     "@types/node": "^24.3.0",

@@ -1,3 +1,4 @@
+import { Alert, Button } from "@mui/material";
 import { Mic, Timer, ClipboardList } from "lucide-react";
 import type { HockeyApp } from "../hooks/useHockeyApp";
 import MatchCard from "../components/MatchCard";
@@ -13,9 +14,9 @@ export default function MyShiftsPage({ app }: { app: HockeyApp }) {
   return (
     <div className="match-list">
       {!app.ownFamily && (
-        <p className="notice">
+        <Alert severity="info">
           Administratören behöver koppla ditt konto till rätt familj.
-        </p>
+        </Alert>
       )}
       {matches.map((match) => {
         const ownAssignments = assignments.filter(
@@ -33,10 +34,16 @@ export default function MyShiftsPage({ app }: { app: HockeyApp }) {
                     ? Mic
                     : ClipboardList;
               return (
-                <a className="my-task" href="#instruktioner" key={assignment.role}>
-                  <Icon size={25} />
+                <Button
+                  className="my-task"
+                  variant="outlined"
+                  fullWidth
+                  href="#instruktioner"
+                  key={assignment.role}
+                  startIcon={<Icon size={25} />}
+                >
                   <strong>Min uppgift: {assignment.role}</strong>
-                </a>
+                </Button>
               );
             })}
           </MatchCard>

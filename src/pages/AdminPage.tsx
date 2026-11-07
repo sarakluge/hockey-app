@@ -1,4 +1,19 @@
-import { useState } from "react";
+import { Accordion, AccordionSummary, AccordionDetails, Typography } from "@mui/material";
+import { ChevronDown } from "lucide-react";
+import {
+  Button,
+  Checkbox,
+  FormControlLabel,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+} from "@mui/material";
+import SelectField from "../components/SelectField";
+import { useState, useRef } from "react";
 import { ShieldCheck, RefreshCw, Upload, Download } from "lucide-react";
 import type { HockeyApp } from "../hooks/useHockeyApp";
 import { distribution, formatDate, type Profile } from "../lib/types";
@@ -26,6 +41,7 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
     setImportApproved,
     importData,
   } = app;
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [selected, setSelected] = useState("");
   const matches = [...data.matches].sort((first, second) =>
     (first.starts_at || "9999").localeCompare(second.starts_at || "9999"),
@@ -37,7 +53,7 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
 
   return (
     <div className="admin-page">
-      <section className="panel">
+      <Paper component="section" variant="outlined" className="panel">
         <div className="section-heading">
           <h2>Bemanna en match</h2>
           <Badge tone="green">
@@ -45,29 +61,27 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
             Administratör
           </Badge>
         </div>
-        <label className="field-label">
-          Välj hemmamatch
-          <select
-            value={activeMatch?.id || ""}
-            onChange={(e) => setSelected(e.target.value)}
-          >
-            <option value="" disabled>
-              Välj match
+        <SelectField
+          label="Välj hemmamatch"
+          value={activeMatch?.id || ""}
+          onChange={(e) => setSelected(e.target.value)}
+        >
+          <option value="" disabled>
+            Välj match
+          </option>
+          {matches.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.starts_at
+                ? formatDate(m.starts_at, {
+                    day: "numeric",
+                    month: "short",
+                  })
+                : "Tid saknas"}{" "}
+              · {m.away_team} ·{" "}
+              {m.kind === "dm" || (demo && m.competition === "22208") ? "DM" : "Serie"}
             </option>
-            {matches.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.starts_at
-                  ? formatDate(m.starts_at, {
-                      day: "numeric",
-                      month: "short",
-                    })
-                  : "Tid saknas"}{" "}
-                · {m.away_team} ·{" "}
-                {m.kind === "dm" || (demo && m.competition === "22208") ? "DM" : "Serie"}
-              </option>
-            ))}
-          </select>
-        </label>
+          ))}
+        </SelectField>
         {activeMatch ? (
           <Staffing match={activeMatch} data={data} busy={busy} onAssign={assign} />
         ) : (
@@ -77,8 +91,8 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
           OVR, klocka och speaker kan bara tilldelas familjer med motsvarande behörighet.
           Flera uppgifter till samma familj förutsätter flera vuxna.
         </p>
-      </section>
-      <section className="panel">
+      </Paper>
+      <Paper component="section" variant="outlined" className="panel">
         <div className="section-heading">
           <h2>Rättvis fördelning</h2>
           <span className="small muted">Alla importerade matcher</span>
@@ -87,67 +101,78 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
           Ett tilldelat pass räknas som ett pass. Båsdörr 1 och 2 räknas tillsammans,
           precis som i Excel.
         </p>
-        <div className="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>Familj / spelare</th>
-                <th>Båsdörr</th>
-                <th>OVR</th>
-                <th>Klocka</th>
-                <th>Speaker</th>
-                <th>Matchvärd</th>
-                <th>Totalt</th>
-              </tr>
-            </thead>
-            <tbody>
+        <TableContainer
+          tabIndex={0}
+          role="region"
+          aria-label="Arbetsfördelning, rulla i sidled för alla kolumner"
+        >
+          <Table size="small">
+            <caption>Antal tilldelade pass per familj i det valda laget.</caption>
+            <TableHead>
+              <TableRow>
+                <TableCell>Familj / spelare</TableCell>
+                <TableCell>Båsdörr</TableCell>
+                <TableCell>OVR</TableCell>
+                <TableCell>Klocka</TableCell>
+                <TableCell>Speaker</TableCell>
+                <TableCell>Matchvärd</TableCell>
+                <TableCell>Totalt</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
               {distribution(data.families, data.assignments)
                 .sort((a, b) => a.total - b.total)
                 .map((f) => (
-                  <tr key={f.id}>
-                    <td>{f.name}</td>
-                    <td>{f.counts[0] + f.counts[1]}</td>
+                  <TableRow key={f.id}>
+                    <TableCell>{f.name}</TableCell>
+                    <TableCell>{f.counts[0] + f.counts[1]}</TableCell>
                     {f.counts.slice(2).map((c, i) => (
-                      <td key={i}>{c}</td>
+                      <TableCell key={i}>{c}</TableCell>
                     ))}
-                    <td>
+                    <TableCell>
                       <strong className="total-pill">{f.total}</strong>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-      <section className="panel">
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
+      <Paper component="section" variant="outlined" className="panel">
         <h2>Matchdata & import</h2>
         <p className="muted">
           Automatisk uppdatering var sjätte timme efter att GitHub och Supabase är
           anslutna.
         </p>
         <div className="action-row">
-          <button className="button primary" disabled={busy} onClick={() => void sync()}>
+          <Button variant="contained" disabled={busy} onClick={() => void sync()}>
             <RefreshCw size={16} />
             Starta Swehockey-synk
-          </button>
-          <button className="button secondary" onClick={exportData}>
+          </Button>
+          <Button variant="outlined" onClick={exportData}>
             <Download size={16} />
             Exportera data
-          </button>
+          </Button>
         </div>
         <div className="import-box">
           <Upload size={25} />
           <h3>Importera den befintliga Excel-filen</h3>
           <p>Förhandsgranska, koppla matcher och godkänn innan något sparas.</p>
-          <label className="button secondary file-label">
+          <Button
+            variant="outlined"
+            disabled={busy}
+            onClick={() => fileInputRef.current?.click()}
+          >
             Välj Excel-fil
-            <input
-              type="file"
-              accept=".xlsx"
-              disabled={busy}
-              onChange={(e) => void readFile(e.target.files?.[0])}
-            />
-          </label>
+          </Button>
+          <input
+            ref={fileInputRef}
+            hidden
+            type="file"
+            accept=".xlsx"
+            aria-label="Excel-fil för import"
+            onChange={(event) => void readFile(event.target.files?.[0])}
+          />
           <small>Originalfilen ändras aldrig. Högst 5 MB.</small>
         </div>
         {preview && (
@@ -169,8 +194,8 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
                 <p>
                   {r.day} · {r.arena}
                 </p>
-                <select
-                  aria-label={`Matchkoppling ${r.label}`}
+                <SelectField
+                  label={`Matchkoppling ${r.label}`}
                   value={r.match_id}
                   onChange={(e) =>
                     setPreview((p) =>
@@ -207,68 +232,85 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
                       · {m.away_team} · {m.source_id}
                     </option>
                   ))}
-                </select>
+                </SelectField>
                 <p className="small">
                   {r.assignments.map((a) => `${a.role}: ${a.name}`).join(" · ")}
                 </p>
-                <label className="check-label">
-                  <input
-                    type="checkbox"
-                    checked={r.confirmed}
-                    disabled={!r.match_id}
-                    onChange={(e) =>
-                      setPreview((p) =>
-                        p
-                          ? {
-                              ...p,
-                              rows: p.rows.map((v, i) =>
-                                i === index
-                                  ? {
-                                      ...v,
-                                      confirmed: e.target.checked,
-                                    }
-                                  : v,
-                              ),
-                            }
-                          : p,
-                      )
-                    }
-                  />
-                  Jag har kontrollerat tävling, lag och match-ID.
-                </label>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={r.confirmed}
+                      disabled={!r.match_id}
+                      onChange={(e) =>
+                        setPreview((p) =>
+                          p
+                            ? {
+                                ...p,
+                                rows: p.rows.map((v, i) =>
+                                  i === index
+                                    ? {
+                                        ...v,
+                                        confirmed: e.target.checked,
+                                      }
+                                    : v,
+                                ),
+                              }
+                            : p,
+                        )
+                      }
+                    />
+                  }
+                  label={<> Jag har kontrollerat tävling, lag och match-ID.</>}
+                />
               </div>
             ))}
-            <details>
-              <summary>Visa familjer och behörigheter</summary>
-              {preview.families.map((f) => (
-                <p key={f.name}>
-                  {f.name} · OVR: {f.ovr_ok ? "Ja" : "Nej"} · Klocka:{" "}
-                  {f.clock_ok ? "Ja" : "Nej"} · Speaker: {f.speaker_ok ? "Ja" : "Nej"}
-                </p>
-              ))}
-            </details>
-            <details>
-              <summary>Visa instruktioner (kan innehålla privata halluppgifter)</summary>
-              {preview.instructions.map((i, n) => (
-                <div key={n}>
-                  <h4>
-                    {i.title} · {i.arena}
-                  </h4>
-                  <p className="instruction-body">{i.body}</p>
-                </div>
-              ))}
-            </details>
-            <label className="check-label">
-              <input
-                type="checkbox"
-                checked={importApproved}
-                onChange={(e) => setImportApproved(e.target.checked)}
-              />
-              Jag godkänner att dessa personuppgifter och instruktioner sparas privat i
-              lagets databas.
-            </label>
-            <button
-              className="button primary"
+            <Accordion>
+              <AccordionSummary expandIcon={<ChevronDown size={20} />}>
+                <Typography>Visa familjer och behörigheter</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                {preview.families.map((f) => (
+                  <p key={f.name}>
+                    {f.name} · OVR: {f.ovr_ok ? "Ja" : "Nej"} · Klocka:{" "}
+                    {f.clock_ok ? "Ja" : "Nej"} · Speaker: {f.speaker_ok ? "Ja" : "Nej"}
+                  </p>
+                ))}
+              </AccordionDetails>
+            </Accordion>
+            <Accordion>
+              <AccordionSummary expandIcon={<ChevronDown size={20} />}>
+                <Typography>
+                  Visa instruktioner (kan innehålla privata halluppgifter)
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                {preview.instructions.map((i, n) => (
+                  <div key={n}>
+                    <h4>
+                      {i.title} · {i.arena}
+                    </h4>
+                    <p className="instruction-body">{i.body}</p>
+                  </div>
+                ))}
+              </AccordionDetails>
+            </Accordion>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={importApproved}
+                  onChange={(e) => setImportApproved(e.target.checked)}
+                />
+              }
+              label={
+                <>
+                  {" "}
+                  Jag godkänner att dessa personuppgifter och instruktioner sparas privat
+                  i lagets databas.
+                </>
+              }
+            />
+            <Button
+              variant="contained"
               disabled={
                 busy ||
                 demo ||
@@ -279,10 +321,10 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
               onClick={() => void importData()}
             >
               Godkänn och importera
-            </button>
-            <button className="text-button" onClick={() => setPreview(null)}>
+            </Button>
+            <Button variant="text" onClick={() => setPreview(null)}>
               Avbryt
-            </button>
+            </Button>
             {demo && (
               <p className="small muted">
                 Sparande av personuppgifter är avstängt i demoläget.
@@ -315,8 +357,8 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
             <p className="muted">Ingen synk har körts ännu.</p>
           )}
         </div>
-      </section>
-      <section className="panel">
+      </Paper>
+      <Paper component="section" variant="outlined" className="panel">
         <h2>Användare & godkännande</h2>
         <InviteUser demo={demo} onDone={() => void load()} />
         <p className="muted">
@@ -335,8 +377,8 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
                   {p.role === "ADMIN" ? "Administratör" : "Förälder"}
                 </p>
               </div>
-              <select
-                aria-label={`Familj för ${p.email}`}
+              <SelectField
+                label={`Familj för ${p.email}`}
                 value={p.family_id || ""}
                 disabled={busy}
                 onChange={(e) =>
@@ -351,9 +393,9 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
                     {f.name}
                   </option>
                 ))}
-              </select>
-              <select
-                aria-label={`Roll för ${p.email}`}
+              </SelectField>
+              <SelectField
+                label={`Roll för ${p.email}`}
                 disabled={busy || p.id === userId}
                 value={p.role}
                 onChange={(e) =>
@@ -364,9 +406,9 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
               >
                 <option value="PARENT">Förälder</option>
                 <option value="ADMIN">Administratör</option>
-              </select>
-              <button
-                className="button secondary"
+              </SelectField>
+              <Button
+                variant="outlined"
                 disabled={busy || p.id === userId}
                 onClick={() =>
                   void updateProfile(p.id, {
@@ -375,11 +417,11 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
                 }
               >
                 {p.approved ? "Återkalla" : "Godkänn"}
-              </button>
+              </Button>
             </div>
           ))
         )}
-      </section>
+      </Paper>
       <ManualImport
         onDone={() => void load()}
         demo={demo}

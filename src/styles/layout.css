@@ -1,173 +1,40 @@
-.app-shell {
-  min-height: 100dvh;
-  padding-bottom: calc(90px + env(safe-area-inset-bottom));
-}
-
-.app-header {
-  background: linear-gradient(125deg, #06182f, #102d50);
-  color: white;
-  padding-top: env(safe-area-inset-top);
-}
-
-.header-inner {
-  max-width: 760px;
-  min-height: 120px;
-  padding: 24px 20px;
-  margin: auto;
-  display: flex;
-  align-items: center;
-  gap: 17px;
-}
-
+/* Only app-specific layout lives here. MUI controls navigation and surfaces. */
 .hockey-mark {
-  width: 53px;
-  height: 59px;
-}
-.header-title {
-  flex: 1;
-  min-width: 0;
-}
-.header-title p {
-  font-size: 16px;
-  font-weight: 600;
-}
-.header-title p span {
-  display: none;
-}
-.header-title h1 {
-  font-size: clamp(24px, 6.5vw, 31px);
-  font-weight: 750;
-  letter-spacing: -0.7px;
-  line-height: 1.25;
-}
-.header-action,
-.header-back {
-  display: grid;
-  place-items: center;
-  width: 42px;
-  min-height: 44px;
-  background: transparent;
-  color: white;
-  border-radius: 8px;
-}
-.main-content {
-  max-width: 760px;
-  margin: auto;
-  padding: 16px 16px 0;
-}
-.demo-note {
-  color: #707b8b;
-  font-size: 12px;
-  margin: 0 2px 14px;
+  width: 48px;
+  height: 54px;
 }
 .match-filters {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-.match-filters label:first-child {
-  flex: 1;
-}
-.match-filters select {
-  width: 100%;
-  font-size: 13px;
-  background: #fff;
-}
-.match-list {
   display: grid;
-  gap: 18px;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 12px;
 }
-.sync-status {
+.match-list,
+.info-list {
+  display: grid;
+  gap: 20px;
+}
+.empty-state {
   text-align: center;
-  color: #6b7686;
-  font-size: 12px;
-  margin: 30px 0 12px;
+  color: #58677b;
+  padding: 40px 12px;
 }
-
-.bottom-nav {
-  position: fixed;
-  z-index: 20;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: center;
-  background: #fffffffa;
-  border-top: 1px solid var(--border);
-  padding: 9px 12px calc(12px + env(safe-area-inset-bottom));
-  backdrop-filter: blur(12px);
+.empty-state svg {
+  margin-bottom: 12px;
 }
-
-.bottom-nav a {
-  flex: 1;
-  max-width: 250px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  color: #606570;
-  font-size: 14px;
-  font-weight: 600;
-  position: relative;
-  min-height: 56px;
+.empty-state h2 {
+  font-size: 1.2rem;
+  margin: 0 0 10px;
 }
-.bottom-nav a.active {
-  color: #0064ef;
-}
-.bottom-nav a.active::after {
-  content: "";
-  position: absolute;
-  bottom: -5px;
-  width: 65px;
-  height: 3px;
-  background: currentColor;
-  border-radius: 2px;
-}
-
-@media (min-width: 700px) {
-  .header-inner {
-    min-height: 132px;
-    padding: 28px;
-  }
-  .header-title p span {
-    display: inline;
-    font-size: 13px;
-    font-weight: 400;
-    opacity: 0.75;
-  }
-  .main-content {
-    padding: 24px 28px 0;
-  }
-  .main-content.wide {
-    max-width: 1000px;
-  }
+.empty-state p {
+  margin: 0;
 }
 
 @media (max-width: 360px) {
-  .header-inner {
-    padding: 20px 14px;
-    gap: 10px;
-  }
-  .header-title h1 {
-    font-size: 23px;
-  }
   .hockey-mark {
-    width: 43px;
+    width: 36px;
+    height: 44px;
   }
-  .header-action {
-    width: 34px;
+  .match-filters {
+    grid-template-columns: 1fr;
   }
-  .main-content {
-    padding-left: 12px;
-    padding-right: 12px;
-  }
-}
-
-.sync-refresh {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin: 5px auto 0;
-  font-size: 12px;
 }

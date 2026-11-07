@@ -1,3 +1,4 @@
+import SelectField from "../components/SelectField";
 import { useState } from "react";
 import type { HockeyApp } from "../hooks/useHockeyApp";
 import MatchCard from "../components/MatchCard";
@@ -23,33 +24,27 @@ export default function MatchesPage({ app }: { app: HockeyApp }) {
   return (
     <>
       <div className="match-filters">
-        <label>
-          <span className="sr-only">Visa matcher</span>
-          <select
-            aria-label="Visa matcher"
-            value={period}
-            onChange={(event) => setPeriod(event.target.value)}
-          >
-            <option value="upcoming">Kommande matcher</option>
-            <option value="past">Spelade matcher</option>
-            <option value="all">Alla matcher</option>
-          </select>
-        </label>
-        <label>
-          <span className="sr-only">Tävling</span>
-          <select
-            aria-label="Tävling"
-            value={competition}
-            onChange={(event) => setCompetition(event.target.value)}
-          >
-            <option value="all">Serie & DM</option>
-            {app.competitions.map((item) => (
-              <option key={item.competition} value={item.competition}>
-                {item.kind === "dm" ? "DM" : "Serie"} · {item.competition}
-              </option>
-            ))}
-          </select>
-        </label>
+        <SelectField
+          label="Visa matcher"
+          value={period}
+          onChange={(event) => setPeriod(event.target.value)}
+        >
+          <option value="upcoming">Kommande</option>
+          <option value="past">Spelade</option>
+          <option value="all">Alla matcher</option>
+        </SelectField>
+        <SelectField
+          label="Tävling"
+          value={competition}
+          onChange={(event) => setCompetition(event.target.value)}
+        >
+          <option value="all">Serie & DM</option>
+          {app.competitions.map((item) => (
+            <option key={item.competition} value={item.competition}>
+              {item.kind === "dm" ? "DM" : "Serie"} · {item.competition}
+            </option>
+          ))}
+        </SelectField>
       </div>
       <div className="match-list">
         {matches.map((match) => (

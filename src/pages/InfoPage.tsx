@@ -1,3 +1,10 @@
+import {
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Button,
+  Typography,
+} from "@mui/material";
 import { useState } from "react";
 import { Users, FileText, CarFront, MapPin, Info, ChevronDown } from "lucide-react";
 import type { HockeyApp } from "../hooks/useHockeyApp";
@@ -86,12 +93,12 @@ export default function InfoPage({ app }: { app: HockeyApp }) {
             Har du frågor om ditt pass? Kontakta lagets administratör eller lagledare via
             lagets vanliga kontaktväg.
           </p>
-          <button className="text-button" onClick={() => setPrivacyOpen(true)}>
+          <Button onClick={() => setPrivacyOpen(true)}>
             Integritet & personuppgifter
-          </button>
-          <button className="button secondary" onClick={() => void app.logout()}>
+          </Button>
+          <Button variant="outlined" onClick={() => void app.logout()}>
             Logga ut
-          </button>
+          </Button>
         </>
       ),
     },
@@ -101,18 +108,21 @@ export default function InfoPage({ app }: { app: HockeyApp }) {
     <>
       <div className="info-list">
         {sections.map(({ title, Icon, content }, index) => (
-          <details
-            className="info-card"
-            key={title}
-            open={index === 0 ? true : undefined}
-          >
-            <summary>
-              <Icon size={27} />
-              <h2>{title}</h2>
-              <ChevronDown size={24} />
-            </summary>
-            <div className="info-body">{content}</div>
-          </details>
+          <Accordion className="info-card" key={title} defaultExpanded={index === 0}>
+            <AccordionSummary
+              expandIcon={<ChevronDown size={22} />}
+              id={`info-${index}-header`}
+              aria-controls={`info-${index}-content`}
+            >
+              <Icon size={25} color="#0065cc" />
+              <Typography component="h2" variant="h2">
+                {title}
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails id={`info-${index}-content`} className="info-body">
+              {content}
+            </AccordionDetails>
+          </Accordion>
         ))}
       </div>
       {privacyOpen && <PrivacyDialog onClose={() => setPrivacyOpen(false)} />}

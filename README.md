@@ -1,6 +1,6 @@
 # Seket · hemmamatcher och sekretariatsbemanning
 
-Svensk mobilanpassad React/TypeScript-app med Supabase Auth, PostgreSQL och RLS. Frontend kan köras på GitHub Pages och matchsynk via GitHub Actions. Inga riktiga personuppgifter ingår i repo eller demo.
+Svensk mobilanpassad React/TypeScript-app med Material UI (MUI), Supabase Auth, PostgreSQL och RLS. Frontend kan köras på GitHub Pages och matchsynk via GitHub Actions. Inga riktiga personuppgifter ingår i repo eller demo.
 
 **Databasen är nu förberedd för flera föreningar och lag. Migrationerna är omskrivna för ett nytt, tomt Supabase-projekt där inga tidigare appmigrationer har körts.** Ingen ändring har gjorts i det riktiga Supabase-projektet. Kör inte dessa initialmigrationer ovanpå den gamla modellen eller en databas med appdata; en sådan uppgradering kräver en separat datamigrering.
 
@@ -221,7 +221,7 @@ RPC `manual_matches(p_team_id, p_matches)` kan bara köras av administratör i v
 
 Testfallen täcker tre lag i två föreningar, olika roller per lag för samma användare, väntande/obehöriga konton, explicita servicegrants, samma familjenamn/matchnyckel i olika lag, nekad skrivning och RPC i fel lag, sammansatta foreign keys, behörighetsflaggor, atomisk/idempotent import, lagseparerad rate limit samt flyttade/försvunna matcher utan förlorad bemanning.
 
-Webbläsarkontroll med fiktiva data: starta Vite och kör `node scripts/browser-check.mjs`. Den använder befintlig Chrome på macOS, eller sökvägen i `CHROME_PATH`, och kontrollerar tre flikar, matchfilter, bemanning, pass, info och fyra skärmbredder. Skärmbilder läggs i `/tmp`.
+Webbläsarkontroll med fiktiva data: starta Vite och kör `node scripts/browser-check.mjs`. Den använder befintlig Chrome på macOS, eller sökvägen i `CHROME_PATH`, och kontrollerar tre flikar, matchfilter, bemanning, pass, info och fyra skärmbredder. Axe kontrollerar även automatiskt testbara WCAG 2.1 AA-regler i huvudvyerna och integritetsdialogen; Escape-stängning och återställt fokus verifieras. Detta ersätter inte manuell tillgänglighetsgranskning. Skärmbilder läggs i `/tmp`.
 
 PGlite ersätter inte Supabase Auth eller PostgREST. Inställningen Automatically expose new tables verifieras lokalt genom PostgreSQL-rättigheter, inte via ett anrop till ert riktiga projekt. Verkliga engångslänkar, PostgREST/exponerade scheman, Edge Function, GitHub-secrets och publicering måste senare kontrolleras av projektägaren i rätt miljö. Ingen skarp synk, SQL-körning, import eller publicering har gjorts i denna uppgift.
 
@@ -247,3 +247,13 @@ PGlite ersätter inte Supabase Auth eller PostgREST. Inställningen Automaticall
 - `supabase/functions/dispatch-sync/`: autentiserad, lagbegränsad workflow-start.
 
 Kör `npm run format` för läsbara radbrytningar/indrag och `npm run format:check` för kontroll. `.editorconfig` och `.prettierrc.json` innehåller inställningarna. SQL-migrationerna är formaterade separat med läsbara block. Redigera aldrig komprimerade byggfiler i `dist/`.
+
+## Komponentbibliotek och tema
+
+Gränssnittet använder **MUI Material UI 9** med Emotion och svensk lokalisering. Temat i `src/theme/theme.ts` samlar färger, typografi, avstånd och komponentinställningar. `ThemeProvider` och `CssBaseline` kopplas in i `src/main.tsx`. Systemtypsnitt används utan externa fontanrop.
+
+Använd MUI:s `Button`, `TextField`, `Card`, `Alert`, `Accordion`, `Dialog`, `Table` och övriga standardkomponenter när gränssnittet byggs vidare. `SelectField` är ett tunt MUI TextField-omslag med native-valmeny för mobil och en synlig, kopplad etikett. Lucide används fortsatt för SVG-ikoner. CSS-filerna innehåller endast appens egna sammansättningar och layout; tidigare Tailwind-beroenden och globala formulärstilar har tagits bort.
+
+Integritetsdialogen använder MUI:s fokuslås och återställer fokus vid stängning. Navigation och ikonknappar har tillgängliga namn; en hoppa-till-innehåll-länk kan nås med tangentbord. Den breda fördelningstabellen är tangentbordsfokuserbar och kan rullas i sidled. Kontrollera fortfarande innehåll, nya flöden, skärmläsning och zoom manuellt; ett komponentbibliotek garanterar inte i sig att appen uppfyller alla riktlinjer.
+
+Administration, informationssidan och Excel-läsning laddas vid behov. MUI och Supabase byggs som separata cachebara paketdelar. Inga databasändringar behövs för MUI-bytet.
