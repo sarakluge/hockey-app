@@ -15,7 +15,7 @@ import {
 } from "@mui/material";
 import SelectField from "../components/SelectField";
 import { useState } from "react";
-import { ShieldCheck, RefreshCw, Download } from "lucide-react";
+import { RefreshCw, Download } from "lucide-react";
 import type { HockeyApp } from "../hooks/useHockeyApp";
 import { distribution, formatDate, type Profile } from "../lib/types";
 import Badge from "../components/Badge";
@@ -40,6 +40,10 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
   const matches = [...data.matches].sort((first, second) =>
     (first.starts_at || "9999").localeCompare(second.starts_at || "9999"),
   );
+  const activeSearches = data.replacementSearches.filter(
+    (s) => s.status === "searching",
+  ).length;
+  const pendingUsers = data.profiles.filter((p) => !p.approved).length;
   const activeMatch = matches.find((match) => match.id === selected) || matches[0];
 
   if (!admin)
@@ -60,12 +64,47 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
 
   return (
     <Box>
-      <AdminPanel>
-        <h2>Ersättarsökningar</h2>
+      <AdminPanel
+        title="Ersättarsökningar"
+        summary={`${activeSearches} pågående`}
+        attention={activeSearches > 0}
+      >
         <ReplacementSearches app={app} adminView />
       </AdminPanel>
-      <AdminPanel>
-        <h2>Spelare</h2>
+      <AdminPanel title="Bemanna en match" summary={`${matches.length} matcher`}>
+        <SelectField
+          label="Välj hemmamatch"
+          value={activeMatch?.id || ""}
+          onChange={(e) => setSelected(e.target.value)}
+        >
+          <option value="" disabled>
+            Välj match
+          </option>
+          {matches.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.starts_at
+                ? formatDate(m.starts_at, {
+                    day: "numeric",
+                    month: "short",
+                  })
+                : "Tid saknas"}{" "}
+              · {m.away_team} ·{" "}
+              {m.kind === "dm" || (demo && m.competition === "22208") ? "DM" : "Serie"}
+            </option>
+          ))}
+        </SelectField>
+        {activeMatch ? (
+          <Staffing match={activeMatch} data={data} busy={busy} onAssign={assign} />
+        ) : (
+          <p>Hämta lagets matcher från Swehockey för att börja bemanna.</p>
+        )}
+        <Box component="p" sx={{ color: "text.secondary", fontSize: "0.8125rem" }}>
+          OVR, klocka och speaker kan bara tilldelas spelare vars föräldrar har
+          motsvarande behörighet. Flera uppgifter till samma spelare förutsätter flera
+          vuxna.
+        </Box>
+      </AdminPanel>
+      <AdminPanel title="Spelare" summary={`${data.families.length}`}>
         <p>
           Lägg in barnens för- och efternamn, ett namn per rad. Flera föräldrar kan
           kopplas till samma spelare.
@@ -134,73 +173,7 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
           någon av dem kan uppgiften.
         </p>
       </AdminPanel>
-      <AdminPanel>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: "12px",
-            flexWrap: "wrap",
-            marginBottom: "16px",
-            "& h2": { marginBottom: "0" },
-          }}
-        >
-          <h2>Bemanna en match</h2>
-          <Badge tone="green">
-            <ShieldCheck size={12} />
-            Administratör
-          </Badge>
-        </Box>
-        <SelectField
-          label="Välj hemmamatch"
-          value={activeMatch?.id || ""}
-          onChange={(e) => setSelected(e.target.value)}
-        >
-          <option value="" disabled>
-            Välj match
-          </option>
-          {matches.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.starts_at
-                ? formatDate(m.starts_at, {
-                    day: "numeric",
-                    month: "short",
-                  })
-                : "Tid saknas"}{" "}
-              · {m.away_team} ·{" "}
-              {m.kind === "dm" || (demo && m.competition === "22208") ? "DM" : "Serie"}
-            </option>
-          ))}
-        </SelectField>
-        {activeMatch ? (
-          <Staffing match={activeMatch} data={data} busy={busy} onAssign={assign} />
-        ) : (
-          <p>Hämta lagets matcher från Swehockey för att börja bemanna.</p>
-        )}
-        <Box component="p" sx={{ color: "text.secondary", fontSize: "0.8125rem" }}>
-          OVR, klocka och speaker kan bara tilldelas spelare vars föräldrar har
-          motsvarande behörighet. Flera uppgifter till samma spelare förutsätter flera
-          vuxna.
-        </Box>
-      </AdminPanel>
-      <AdminPanel>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: "12px",
-            flexWrap: "wrap",
-            marginBottom: "16px",
-            "& h2": { marginBottom: "0" },
-          }}
-        >
-          <h2>Rättvis fördelning</h2>
-          <Box component="span" sx={{ color: "text.secondary", fontSize: "0.8125rem" }}>
-            Alla lagets matcher
-          </Box>
-        </Box>
+      <AdminPanel title="Rättvis fördelning" summary="Alla lagets matcher">
         <Box component="p" sx={{ color: "text.secondary" }}>
           Ett tilldelat pass räknas som ett pass. Båsdörr 1 och 2 räknas tillsammans.
         </Box>
@@ -251,8 +224,19 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
           </Table>
         </TableContainer>
       </AdminPanel>
-      <AdminPanel>
-        <h2>Matcher från Swehockey</h2>
+      <AdminPanel
+        title="Matchhämtning"
+        summary={
+          data.logs.slice().sort((a, b) => b.created_at.localeCompare(a.created_at))[0]
+            ?.success === false
+            ? "Senaste hämtning misslyckades"
+            : undefined
+        }
+        attention={
+          data.logs.slice().sort((a, b) => b.created_at.localeCompare(a.created_at))[0]
+            ?.success === false
+        }
+      >
         <Box component="p" sx={{ color: "text.secondary" }}>
           Lagets hemmamatcher hämtas från Swehockey. Datum, tider och arenor uppdateras
           vid synk, och bemanningen finns kvar.
@@ -317,8 +301,15 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
           )}
         </Box>
       </AdminPanel>
-      <AdminPanel>
-        <h2>Användare & godkännande</h2>
+      <AdminPanel
+        title="Användare & godkännande"
+        summary={
+          pendingUsers
+            ? `${pendingUsers} väntar på godkännande`
+            : `${data.profiles.length} användare`
+        }
+        attention={pendingUsers > 0}
+      >
         <InviteUser demo={demo} onDone={() => void load()} />
         <Box component="p" sx={{ color: "text.secondary" }}>
           Be föräldrar skapa konto och logga in. Kontrollera angivet barnnamn, välj rätt

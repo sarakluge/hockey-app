@@ -1,5 +1,11 @@
 import { useState } from "react";
 import {
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Chip,
+  Tabs,
+  Tab,
   Typography,
   Box,
   Button,
@@ -8,7 +14,7 @@ import {
   DialogContent,
   DialogActions,
 } from "@mui/material";
-import { Search, CircleCheck, CircleAlert, Ban } from "lucide-react";
+import { Search, CircleCheck, CircleAlert, Ban, ChevronDown } from "lucide-react";
 import type { HockeyApp } from "../hooks/useHockeyApp";
 import { eligible, formatDate, type Role } from "../lib/types";
 import SelectField from "./SelectField";
@@ -84,6 +90,8 @@ export default function ReplacementSearches({
   matchId?: string;
   adminView?: boolean;
 }) {
+  const [expandedSearches, setExpandedSearches] = useState<Record<string, boolean>>({});
+  const [adminTab, setAdminTab] = useState("active");
   const [families, setFamilies] = useState<Record<string, string>>({});
   const searches = app.data.replacementSearches
     .filter(
@@ -102,10 +110,34 @@ export default function ReplacementSearches({
           )),
     )
     .sort((a, b) => b.created_at.localeCompare(a.created_at));
-  if (!searches.length) return adminView ? <p>Inga ersättarsökningar ännu.</p> : null;
+  const activeCount = searches.filter((s) => s.status === "searching").length;
+  const visibleSearches = adminView
+    ? searches.filter((s) =>
+        adminTab === "active" ? s.status === "searching" : s.status !== "searching",
+      )
+    : searches;
+  if (!searches.length && !adminView) return null;
   return (
-    <Box sx={{ display: "grid", gap: 2, mt: 2 }}>
-      {searches.map((search) => {
+    <Box sx={{ display: "grid", gap: adminView ? 1 : 2, mt: adminView ? 0 : 2 }}>
+      {adminView && (
+        <Tabs
+          value={adminTab}
+          onChange={(_, value: string) => setAdminTab(value)}
+          aria-label="Filtrera ersättarsökningar"
+          sx={{ mb: 1 }}
+        >
+          <Tab value="active" label={`Pågående (${activeCount})`} />
+          <Tab value="history" label={`Historik (${searches.length - activeCount})`} />
+        </Tabs>
+      )}
+      {adminView && !visibleSearches.length && (
+        <Typography color="text.secondary" sx={{ py: 2 }}>
+          {adminTab === "active"
+            ? "Inga pågående ersättarsökningar."
+            : "Inga avslutade ersättarsökningar."}
+        </Typography>
+      )}
+      {visibleSearches.map((search) => {
         const match = app.data.matches.find((m) => m.id === search.match_id);
         const own = search.original_family_id === app.ownFamily;
         const invitation = app.data.replacementInvitations.find(
@@ -139,58 +171,51 @@ export default function ReplacementSearches({
               (u) => u.match_id === search.match_id && u.family_id === f.id,
             ),
         );
-        return (
-          <Box
-            key={search.id}
-            sx={{
-              p: 2,
-              border: "1px solid",
-              borderColor: "primary.main",
-              borderRadius: 1,
-              backgroundColor: "#eff6ff",
-            }}
-          >
-            <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.5 }}>
-              <Box
-                sx={{ color: statusColor, display: "flex", mt: "2px" }}
-                aria-hidden="true"
-              >
-                <StatusIcon size={22} />
-              </Box>
-              <Box sx={{ minWidth: 0 }}>
-                <Typography
-                  component="h3"
-                  sx={{ fontSize: "1rem", fontWeight: 700, color: "text.primary" }}
+        const details = (
+          <>
+            {!adminView && (
+              <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.5 }}>
+                <Box
+                  sx={{ color: statusColor, display: "flex", mt: "2px" }}
+                  aria-hidden="true"
                 >
-                  {canRespond ? "Kan din familj ta passet?" : statuses[search.status]}
-                </Typography>
-                <Typography
-                  component="p"
-                  variant="body2"
-                  sx={{ mt: 0.5, color: "text.secondary", overflowWrap: "anywhere" }}
-                >
-                  {search.role}
-                  {!matchId && (
-                    <>
-                      {" "}
-                      · {match?.away_team}
-                      {match?.starts_at && (
-                        <>
-                          {" "}
-                          ·{" "}
-                          {formatDate(match.starts_at, {
-                            day: "numeric",
-                            month: "short",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </>
-                      )}
-                    </>
-                  )}
-                </Typography>
+                  <StatusIcon size={22} />
+                </Box>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography
+                    component="h3"
+                    sx={{ fontSize: "1rem", fontWeight: 700, color: "text.primary" }}
+                  >
+                    {canRespond ? "Kan din familj ta passet?" : statuses[search.status]}
+                  </Typography>
+                  <Typography
+                    component="p"
+                    variant="body2"
+                    sx={{ mt: 0.5, color: "text.secondary", overflowWrap: "anywhere" }}
+                  >
+                    {search.role}
+                    {!matchId && (
+                      <>
+                        {" "}
+                        · {match?.away_team}
+                        {match?.starts_at && (
+                          <>
+                            {" "}
+                            ·{" "}
+                            {formatDate(match.starts_at, {
+                              day: "numeric",
+                              month: "short",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </>
+                        )}
+                      </>
+                    )}
+                  </Typography>
+                </Box>
               </Box>
-            </Box>
+            )}
             <p>
               {app.data.families.find((f) => f.id === search.original_family_id)?.name}
               {search.replacement_family_id && (
@@ -337,6 +362,128 @@ export default function ReplacementSearches({
                 )}
               </>
             )}
+          </>
+        );
+        if (adminView) {
+          const invitations = app.data.replacementInvitations.filter(
+            (i) => i.search_id === search.id,
+          );
+          const pending = invitations.filter((i) => i.response === "pending").length;
+          return (
+            <Accordion
+              key={search.id}
+              expanded={!!expandedSearches[search.id]}
+              onChange={(_, expanded) =>
+                setExpandedSearches((previous) => ({
+                  ...previous,
+                  [search.id]: expanded,
+                }))
+              }
+            >
+              <AccordionSummary
+                expandIcon={<ChevronDown size={18} />}
+                id={`replacement-${search.id}-summary`}
+                aria-controls={`replacement-${search.id}-details`}
+                sx={{ "& .MuiAccordionSummary-content": { minWidth: 0 } }}
+              >
+                <Box
+                  sx={{
+                    minWidth: 0,
+                    width: "100%",
+                    display: "flex",
+                    alignItems: { xs: "flex-start", sm: "center" },
+                    flexDirection: { xs: "column", sm: "row" },
+                    gap: 1,
+                  }}
+                >
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <Typography
+                      component="span"
+                      sx={{
+                        display: "block",
+                        fontWeight: 650,
+                        fontSize: "0.875rem",
+                        overflowWrap: "anywhere",
+                      }}
+                    >
+                      {search.role} · {match?.away_team}
+                    </Typography>
+                    <Typography
+                      component="span"
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ display: "block" }}
+                    >
+                      {match?.starts_at
+                        ? formatDate(match.starts_at, {
+                            day: "numeric",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "Tid saknas"}{" "}
+                      ·{" "}
+                      {
+                        app.data.families.find((f) => f.id === search.original_family_id)
+                          ?.name
+                      }
+                    </Typography>
+                  </Box>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      gap: 1,
+                    }}
+                  >
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      color={
+                        search.status === "found"
+                          ? "success"
+                          : search.status === "exhausted"
+                            ? "warning"
+                            : "default"
+                      }
+                      label={
+                        open
+                          ? `Inväntar svar (${pending}) · Grupp ${search.current_group}`
+                          : statuses[search.status]
+                      }
+                    />
+                    <Typography component="span" variant="caption" color="primary.main">
+                      {expandedSearches[search.id] ? "Dölj detaljer" : "Visa detaljer"}
+                    </Typography>
+                  </Box>
+                </Box>
+              </AccordionSummary>
+              <AccordionDetails
+                sx={{
+                  p: 2,
+                  pt: 0,
+                  "& p": { mt: 0, mb: 1.5 },
+                  "& ul": { pl: 2.5, overflowWrap: "anywhere" },
+                }}
+              >
+                {details}
+              </AccordionDetails>
+            </Accordion>
+          );
+        }
+        return (
+          <Box
+            key={search.id}
+            sx={{
+              p: 2,
+              border: "1px solid",
+              borderColor: "primary.main",
+              borderRadius: 1,
+              backgroundColor: "#eff6ff",
+            }}
+          >
+            {details}
           </Box>
         );
       })}
