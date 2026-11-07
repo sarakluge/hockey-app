@@ -20,15 +20,20 @@ page.on("pageerror", (error) => errors.push(error.message));
 try {
   await page.goto(baseUrl);
   await expect(
+    page.getByRole("heading", { name: "Logga in", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Huvudmeny" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Utforska demoläget" }).click();
+  await expect(
     page.getByRole("heading", { name: "Hemmamatcher", exact: true }),
   ).toBeVisible();
-  await expect(page.locator(".match-card")).toHaveCount(4);
+  await expect(page.getByRole("article")).toHaveCount(4);
   await expect(
     page.getByRole("navigation", { name: "Huvudmeny" }).getByRole("link"),
   ).toHaveCount(3);
-  await expect(page.locator(".staffing-row").first()).toContainText("Båsdörr 1");
+  await expect(page.getByRole("article").first()).toContainText("Båsdörr 1");
   await page.getByRole("combobox", { name: "Tävling" }).selectOption("22208");
-  await expect(page.locator(".match-card")).toHaveCount(2);
+  await expect(page.getByRole("article")).toHaveCount(2);
   await page.getByRole("combobox", { name: "Tävling" }).selectOption("all");
   await page.screenshot({ path: "/tmp/hemmaplan-mobile.png", fullPage: true });
 
@@ -41,12 +46,14 @@ try {
   ).toHaveValue("demo-family-7");
 
   await page.getByRole("link", { name: "Mina pass", exact: true }).click();
-  await expect(page.locator(".shift-card")).toHaveCount(2);
-  await expect(page.locator(".my-task").first()).toContainText("Min uppgift:");
+  await expect(page.getByRole("article")).toHaveCount(2);
+  await expect(
+    page.getByRole("link", { name: "Min uppgift:", exact: false }).first(),
+  ).toContainText("Min uppgift:");
   await page.screenshot({ path: "/tmp/hemmaplan-shifts.png", fullPage: true });
 
   await page.getByRole("link", { name: "Info", exact: true }).click();
-  await expect(page.locator(".info-card")).toHaveCount(5);
+  await expect(page.locator(".MuiAccordion-root")).toHaveCount(5);
   await expect(
     page.getByText("Detta är en demoinstruktion.", { exact: false }),
   ).toBeVisible();
@@ -72,17 +79,11 @@ try {
   await page.screenshot({ path: "/tmp/hemmaplan-info.png", fullPage: true });
 
   for (const route of ["matcher", "mina", "instruktioner", "admin"]) {
-    await page.goto(`${baseUrl}/#${route}`);
+    await page.evaluate((route) => {
+      window.location.hash = route;
+    }, route);
     await expect(page.locator("h1")).toBeVisible();
-    await expect(
-      page.locator(
-        route === "admin"
-          ? ".admin-page"
-          : route === "instruktioner"
-            ? ".info-list"
-            : ".match-list",
-      ),
-    ).toBeVisible();
+    await expect(page.getByRole("main")).toBeVisible();
     const accessibility = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
       .analyze();
@@ -98,7 +99,9 @@ try {
   for (const width of [320, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     for (const route of ["matcher", "mina", "instruktioner", "admin"]) {
-      await page.goto(`${baseUrl}/#${route}`);
+      await page.evaluate((route) => {
+        window.location.hash = route;
+      }, route);
       await expect(page.locator("h1")).toBeVisible();
       assert.ok(
         await page.evaluate(
@@ -108,7 +111,9 @@ try {
       );
     }
   }
-  await page.goto(`${baseUrl}/#matcher`);
+  await page.evaluate(() => {
+    window.location.hash = "matcher";
+  });
   await page.screenshot({ path: "/tmp/hemmaplan-desktop.png", fullPage: true });
   assert.deepEqual(errors, []);
   console.log(

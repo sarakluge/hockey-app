@@ -1,6 +1,4 @@
 /* MUI's CssBaseline and theme own typography, colors and interactive components. */
-@import "./styles/layout.css";
-@import "./styles/components.css";
 
 svg {
   flex-shrink: 0;
@@ -32,11 +30,4 @@ svg {
   width: auto;
   height: auto;
   overflow: visible;
-}
-.muted,
-.small {
-  color: #58677b;
-}
-.small {
-  font-size: 0.8125rem;
 }

@@ -1,3 +1,4 @@
+import { Box } from "@mui/material";
 import SelectField from "./SelectField";
 import { DoorOpen, Monitor, Mic, Timer, Users } from "lucide-react";
 import { eligible, ROLES, type Data, type Match, type Role } from "../lib/types";
@@ -20,7 +21,7 @@ interface StaffingProps {
 
 export default function Staffing({ match, data, busy, onAssign }: StaffingProps) {
   return (
-    <div className="staffing-list">
+    <Box sx={{ display: "grid", gap: "6px", ...(onAssign ? { my: 2.5 } : {}) }}>
       {ROLES.map((role) => {
         const assignment = data.assignments.find(
           (item) => item.match_id === match.id && item.role === role,
@@ -29,9 +30,38 @@ export default function Staffing({ match, data, busy, onAssign }: StaffingProps)
         const Icon = roleIcons[role];
 
         return (
-          <div className={`staffing-row ${family ? "" : "vacant"}`} key={role}>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "24px minmax(90px, 1fr) minmax(0, 1.3fr)",
+              alignItems: "center",
+              gap: "8px",
+              fontSize: "0.875rem",
+              minHeight: "34px",
+              "& > svg": { color: "#28537e" },
+              "@media (max-width: 400px)": {
+                fontSize: "0.8125rem",
+                gridTemplateColumns: "20px minmax(90px, 1fr) minmax(0, 1.2fr)",
+                gap: "6px",
+              },
+              ...(onAssign
+                ? {
+                    gridTemplateColumns: "24px minmax(90px, 0.6fr) minmax(0, 1.4fr)",
+                    "@media (max-width: 400px)": {
+                      gridTemplateColumns: "20px 1fr",
+                      fontSize: "0.8125rem",
+                      gap: "6px",
+                      "& > .MuiFormControl-root": { gridColumn: 2 },
+                    },
+                  }
+                : {}),
+            }}
+            key={role}
+          >
             <Icon size={21} aria-hidden="true" />
-            <span className="staffing-role">{role}</span>
+            <Box component="span" sx={{ fontWeight: "600" }}>
+              {role}
+            </Box>
             {onAssign ? (
               <SelectField
                 label={role}
@@ -49,11 +79,23 @@ export default function Staffing({ match, data, busy, onAssign }: StaffingProps)
                   ))}
               </SelectField>
             ) : (
-              <span className="staffing-name">{family?.name || "Ej tillsatt"}</span>
+              <Box
+                component="span"
+                sx={{
+                  background: family ? "#f3f6fa" : "#fff8e8",
+                  padding: "6px 8px",
+                  borderRadius: "6px",
+                  textAlign: "right",
+                  overflowWrap: "anywhere",
+                  color: family ? "text.primary" : "#885400",
+                }}
+              >
+                {family?.name || "Ej tillsatt"}
+              </Box>
             )}
-          </div>
+          </Box>
         );
       })}
-    </div>
+    </Box>
   );
 }

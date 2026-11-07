@@ -1,3 +1,4 @@
+import { Box } from "@mui/material";
 import SelectField from "../components/SelectField";
 import { useState } from "react";
 import type { HockeyApp } from "../hooks/useHockeyApp";
@@ -23,7 +24,14 @@ export default function MatchesPage({ app }: { app: HockeyApp }) {
 
   return (
     <>
-      <div className="match-filters">
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: "1.2fr 1fr",
+          gap: "12px",
+          "@media (max-width: 360px)": { gridTemplateColumns: "1fr" },
+        }}
+      >
         <SelectField
           label="Visa matcher"
           value={period}
@@ -45,17 +53,26 @@ export default function MatchesPage({ app }: { app: HockeyApp }) {
             </option>
           ))}
         </SelectField>
-      </div>
-      <div className="match-list">
+      </Box>
+      <Box sx={{ display: "grid", gap: "20px" }}>
         {matches.map((match) => (
           <MatchCard key={match.id} match={match} data={app.data} />
         ))}
-      </div>
+      </Box>
       {!matches.length && (
-        <div className="empty-state">
+        <Box
+          sx={{
+            textAlign: "center",
+            color: "#58677b",
+            padding: "40px 12px",
+            "& svg": { marginBottom: "12px" },
+            "& h2": { fontSize: "1.2rem", margin: "0 0 10px" },
+            "& p": { margin: "0" },
+          }}
+        >
           <h2>Inga matcher att visa</h2>
           <p>Välj ett annat filter eller be administratören uppdatera matcherna.</p>
-        </div>
+        </Box>
       )}
     </>
   );

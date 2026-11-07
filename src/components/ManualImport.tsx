@@ -1,4 +1,6 @@
-import { Button, Checkbox, FormControlLabel, Paper, TextField } from "@mui/material";
+import AdminPanel from "./AdminPanel";
+import { Box } from "@mui/material";
+import { Button, Checkbox, FormControlLabel, TextField } from "@mui/material";
 import { useState } from "react";
 import { supabase, configuredTeamId } from "../lib/supabase";
 
@@ -58,13 +60,13 @@ export default function ManualImport({
     }
   }
   return (
-    <Paper component="section" variant="outlined" className="panel">
+    <AdminPanel>
       <h2>Manuell matchimport · reservlösning</h2>
-      <p className="muted">
+      <Box component="p" sx={{ color: "text.secondary" }}>
         Om Swehockey inte kan läsas: klistra in verifierade matchdata som JSON enligt
         README. Matchnummer och tävling måste komma från officiell källa. Inga matchningar
         görs utifrån datum.
-      </p>
+      </Box>
       <TextField
         multiline
         fullWidth
@@ -97,6 +99,6 @@ export default function ManualImport({
         Validera och spara matchdata
       </Button>
       {result && <p role="status">{result}</p>}
-    </Paper>
+    </AdminPanel>
   );
 }

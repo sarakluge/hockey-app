@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase, configuredTeamId } from "../lib/supabase";
 import { demoData } from "../lib/demo";
 import type { Data, Profile, Role, Team, Competition } from "../lib/types";
 import { type ImportPreview } from "../lib/excel";
+import { isPasswordRecoveryUrl, clearPasswordRecoveryUrl } from "../lib/auth";
 
 const EMPTY_DATA: Data = {
   matches: [],
@@ -14,10 +15,10 @@ const EMPTY_DATA: Data = {
 };
 
 export function useHockeyApp() {
-  const [demo, setDemo] = useState(!supabase);
-  const [data, setData] = useState<Data>(
-    supabase ? EMPTY_DATA : structuredClone(demoData),
-  );
+  const [demo, setDemo] = useState(false);
+  const recoveryRef = useRef(isPasswordRecoveryUrl(window.location.href));
+  const [recoveringPassword, setRecoveringPassword] = useState(recoveryRef.current);
+  const [data, setData] = useState<Data>(EMPTY_DATA);
   const [team, setTeam] = useState<Team | null>(null);
   const [competitions, setCompetitions] = useState<Competition[]>([
     { competition: "21495", kind: "serie" },
@@ -25,9 +26,9 @@ export function useHockeyApp() {
   ]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
-  const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const loadVersion = useRef(0);
   const [loading, setLoading] = useState(!!supabase);
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [importApproved, setImportApproved] = useState(false);
@@ -41,6 +42,7 @@ export function useHockeyApp() {
   }
   async function load() {
     if (!supabase || demo) return;
+    const version = ++loadVersion.current;
     setLoading(true);
     setError("");
     try {
@@ -48,9 +50,15 @@ export function useHockeyApp() {
         data: { user },
         error: authError,
       } = await supabase.auth.getUser();
+      if (version !== loadVersion.current) return;
       if (authError && user) throw authError;
       setUserId(user?.id || null);
       if (!user) {
+        setProfile(null);
+        setData(EMPTY_DATA);
+        return;
+      }
+      if (recoveryRef.current) {
         setProfile(null);
         setData(EMPTY_DATA);
         return;
@@ -60,12 +68,14 @@ export function useHockeyApp() {
       const { error: accessError } = await supabase.rpc("request_team_access", {
         p_team_id: configuredTeamId,
       });
+      if (version !== loadVersion.current) return;
       if (accessError) throw accessError;
       const { data: selectedTeam, error: teamError } = await supabase
         .from("teams")
         .select("*")
         .eq("id", configuredTeamId)
         .single();
+      if (version !== loadVersion.current) return;
       if (teamError) throw teamError;
       setTeam(selectedTeam);
       const { data: p, error: pe } = await supabase
@@ -74,6 +84,7 @@ export function useHockeyApp() {
         .eq("id", user.id)
         .eq("team_id", configuredTeamId)
         .single();
+      if (version !== loadVersion.current) return;
       if (pe) throw pe;
       setProfile(p);
       if (!p.approved) {
@@ -84,6 +95,7 @@ export function useHockeyApp() {
         .from("team_competitions")
         .select("competition, kind")
         .eq("team_id", configuredTeamId);
+      if (version !== loadVersion.current) return;
       if (competitionError) throw competitionError;
       setCompetitions(teamCompetitions || []);
       const results = await Promise.all(
@@ -96,6 +108,7 @@ export function useHockeyApp() {
           ...(p.role === "ADMIN" ? ["profiles"] : []),
         ].map((t) => supabase!.from(t).select("*").eq("team_id", configuredTeamId)),
       );
+      if (version !== loadVersion.current) return;
       for (const r of results) if (r.error) throw r.error;
       setData({
         matches: (results[0].data as Data["matches"]).map((match) => ({
@@ -110,23 +123,38 @@ export function useHockeyApp() {
         profiles: (results[5]?.data || []) as Profile[],
       });
     } catch (e) {
+      if (version !== loadVersion.current) return;
       setProfile(null);
       setData(EMPTY_DATA);
       setError(e instanceof Error ? e.message : "Data kunde inte hämtas. Försök igen.");
     } finally {
-      setLoading(false);
+      if (version === loadVersion.current) setLoading(false);
     }
   }
 
   useEffect(() => {
     if (demo) return;
     void load();
-    const subscription = supabase?.auth.onAuthStateChange(() => {
+    const subscription = supabase?.auth.onAuthStateChange((event) => {
+      loadVersion.current += 1;
+      if (event === "SIGNED_OUT") {
+        setProfile(null);
+        setUserId(null);
+        setData(EMPTY_DATA);
+      }
+      if (event === "PASSWORD_RECOVERY") {
+        recoveryRef.current = true;
+        setRecoveringPassword(true);
+      }
       window.setTimeout(() => void load(), 0);
     });
-    return () => subscription?.data.subscription.unsubscribe();
+    return () => {
+      loadVersion.current += 1;
+      subscription?.data.subscription.unsubscribe();
+    };
   }, [demo]);
   function startDemo() {
+    loadVersion.current += 1;
     setDemo(true);
     setTeam(null);
     setCompetitions([
@@ -140,28 +168,34 @@ export function useHockeyApp() {
       "Demoläge: alla matcher och familjer är fiktiva. Ändringar sparas bara under besöket.",
     );
   }
-  async function login(e: React.FormEvent) {
-    e.preventDefault();
-    if (!supabase) return;
-    setBusy(true);
-    setError("");
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: window.location.origin + import.meta.env.BASE_URL,
-      },
-    });
-    setBusy(false);
-    if (error) setError(error.message);
-    else notify("En engångslänk har skickats till din e-post.");
+  function cancelPasswordRecovery() {
+    recoveryRef.current = false;
+    setRecoveringPassword(false);
+    clearPasswordRecoveryUrl();
+  }
+
+  async function completePasswordRecovery() {
+    const signedOut = await logout();
+    if (!signedOut)
+      throw new Error(
+        "Lösenordet är uppdaterat men utloggningen misslyckades. Försök logga ut igen.",
+      );
+    notify("Ditt lösenord är uppdaterat. Logga in med det nya lösenordet.");
   }
   async function logout() {
-    await supabase?.auth.signOut();
+    loadVersion.current += 1;
+    const result = await supabase?.auth.signOut({ scope: "local" });
+    if (result?.error) {
+      setError("Det gick inte att logga ut. Kontrollera anslutningen och försök igen.");
+      return false;
+    }
+    cancelPasswordRecovery();
     setProfile(null);
     setUserId(null);
     setTeam(null);
     setData(EMPTY_DATA);
     setDemo(false);
+    return true;
   }
   async function assign(matchId: string, role: Role, familyId: string) {
     setError("");
@@ -296,13 +330,14 @@ export function useHockeyApp() {
 
   return {
     demo,
+    recoveringPassword,
+    cancelPasswordRecovery,
+    completePasswordRecovery,
     team,
     competitions,
     data,
     profile,
     userId,
-    email,
-    setEmail,
     message,
     setMessage,
     error,
@@ -318,7 +353,6 @@ export function useHockeyApp() {
     notify,
     load,
     startDemo,
-    login,
     logout,
     assign,
     updateProfile,

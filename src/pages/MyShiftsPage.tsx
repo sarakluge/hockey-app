@@ -1,3 +1,4 @@
+import { Box } from "@mui/material";
 import { Alert, Button } from "@mui/material";
 import { Mic, Timer, ClipboardList } from "lucide-react";
 import type { HockeyApp } from "../hooks/useHockeyApp";
@@ -12,7 +13,7 @@ export default function MyShiftsPage({ app }: { app: HockeyApp }) {
   );
 
   return (
-    <div className="match-list">
+    <Box sx={{ display: "grid", gap: "20px" }}>
       {!app.ownFamily && (
         <Alert severity="info">
           Administratören behöver koppla ditt konto till rätt familj.
@@ -35,7 +36,11 @@ export default function MyShiftsPage({ app }: { app: HockeyApp }) {
                     : ClipboardList;
               return (
                 <Button
-                  className="my-task"
+                  sx={{
+                    justifyContent: "flex-start",
+                    marginTop: "12px",
+                    background: "#eff6ff",
+                  }}
                   variant="outlined"
                   fullWidth
                   href="#instruktioner"
@@ -50,12 +55,21 @@ export default function MyShiftsPage({ app }: { app: HockeyApp }) {
         );
       })}
       {!assignments.length && (
-        <div className="empty-state">
+        <Box
+          sx={{
+            textAlign: "center",
+            color: "#58677b",
+            padding: "40px 12px",
+            "& svg": { marginBottom: "12px" },
+            "& h2": { fontSize: "1.2rem", margin: "0 0 10px" },
+            "& p": { margin: "0" },
+          }}
+        >
           <ClipboardList />
           <h2>Inga tilldelade pass ännu</h2>
           <p>Dina uppgifter visas här när bemanningen är planerad.</p>
-        </div>
+        </Box>
       )}
-    </div>
+    </Box>
   );
 }

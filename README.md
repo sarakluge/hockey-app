@@ -16,7 +16,7 @@ npm run build
 npm run format:check
 ```
 
-Utan Supabase-URL och publik nyckel visas en tydligt märkt demo. Demomatcher och familjer är fiktiva; ändringar sparas bara i minnet. Import av personuppgifter kan förhandsvisas men aldrig sparas i demoläget. Originalarbetsboken ändras inte.
+Appen visar inloggningssidan först för utloggade besökare. Utan Supabase-URL och publik nyckel kan du välja ett tydligt märkt demoläge från inloggningssidan. Demomatcher och familjer är fiktiva; ändringar sparas bara i minnet. Import av personuppgifter kan förhandsvisas men aldrig sparas i demoläget. Originalarbetsboken ändras inte.
 
 ## Datamodell och isolering
 
@@ -106,10 +106,10 @@ Starta om Vite efter ändringar. Använd en publik klientnyckel, aldrig `service
 
 I Supabase Authentication:
 
-1. Aktivera e-postinloggning och konfigurera fungerande e-postleverans för riktiga föräldrar.
+1. Aktivera e-post/lösenordsinloggning och konfigurera fungerande e-postleverans för riktiga föräldrar. Behåll e-postbekräftelse för nya konton aktiverad och välj en lösenordspolicy som minst motsvarar gränssnittets åtta tecken.
 2. Sätt **Site URL** till frontendens adress, till exempel `https://DITT-NAMN.github.io/hockey-app/`.
-3. Lägg exakt denna adress i tillåtna Redirect URLs. För lokal utveckling lägger du också till `http://127.0.0.1:5173/`.
-4. Logga in i appen med en engångslänk. Appen anropar `request_team_access(p_team_id)` och skapar ett **icke godkänt föräldramedlemskap endast i valt lag**. E-post hämtas från Auth i databasen; klienten får inte ange roll, godkännande eller någon annans användar-ID.
+3. Lägg både `https://DITT-NAMN.github.io/hockey-app/` och `https://DITT-NAMN.github.io/hockey-app/?auth=recovery` i tillåtna Redirect URLs. För lokal utveckling lägger du även till `http://127.0.0.1:5173/` och `http://127.0.0.1:5173/?auth=recovery`. Anpassa porten om din devserver använder en annan port.
+4. Välj **Skapa konto**, ange e-post och lösenord, bekräfta e-postadressen via mejlet och logga sedan in med lösenordet. Appen anropar `request_team_access(p_team_id)` och skapar ett **icke godkänt föräldramedlemskap endast i valt lag**. E-post hämtas från Auth i databasen; klienten får inte ange roll, godkännande eller någon annans användar-ID.
 
 En begäran ger bara tillgång till eget medlemskap och minimal lag-/föreningsinformation. Matcher, familjer, bemanning och instruktioner förblir stängda tills administratören godkänt medlemskapet. Ingen Auth-trigger tilldelar globala roller eller automatiskt lägger nya användare i alla lag.
 
@@ -138,7 +138,7 @@ Kontrollera att exakt ett medlemskap för rätt lag returneras. Uppdatera appen.
 
 ## 5. Föräldrar och familjekopplingar
 
-Be föräldrar logga in på **rätt lags frontend**. De visas då i det lagets administrativa kö. En inbjudan via e-post skapar inte godkännande; mottagaren behöver följa länken och begära åtkomst i laget. Under Administration väljer du familj, roll och Godkänn. Två vuxna kan kopplas till samma familj i samma lag och ser då familjens pass.
+Be föräldrar skapa konto och logga in på **rätt lags frontend**. De visas då i det lagets administrativa kö. En inbjudan via e-post skapar inte godkännande; mottagaren behöver följa länken och begära åtkomst i laget. Under Administration väljer du familj, roll och Godkänn. Två vuxna kan kopplas till samma familj i samma lag och ser då familjens pass.
 
 Namnen i Excel avser spelare/familjer. Vuxnas identitet och koppling kan inte härledas ur filen och får aldrig gissas. Återkalla medlemskap per lag när en person inte längre ska ha åtkomst. Återkallelse påverkar inte ett annat lags medlemskap.
 
@@ -223,7 +223,7 @@ Testfallen täcker tre lag i två föreningar, olika roller per lag för samma a
 
 Webbläsarkontroll med fiktiva data: starta Vite och kör `node scripts/browser-check.mjs`. Den använder befintlig Chrome på macOS, eller sökvägen i `CHROME_PATH`, och kontrollerar tre flikar, matchfilter, bemanning, pass, info och fyra skärmbredder. Axe kontrollerar även automatiskt testbara WCAG 2.1 AA-regler i huvudvyerna och integritetsdialogen; Escape-stängning och återställt fokus verifieras. Detta ersätter inte manuell tillgänglighetsgranskning. Skärmbilder läggs i `/tmp`.
 
-PGlite ersätter inte Supabase Auth eller PostgREST. Inställningen Automatically expose new tables verifieras lokalt genom PostgreSQL-rättigheter, inte via ett anrop till ert riktiga projekt. Verkliga engångslänkar, PostgREST/exponerade scheman, Edge Function, GitHub-secrets och publicering måste senare kontrolleras av projektägaren i rätt miljö. Ingen skarp synk, SQL-körning, import eller publicering har gjorts i denna uppgift.
+PGlite ersätter inte Supabase Auth eller PostgREST. Inställningen Automatically expose new tables verifieras lokalt genom PostgreSQL-rättigheter, inte via ett anrop till ert riktiga projekt. Verklig e-postbekräftelse, lösenordsinloggning/återställning, PostgREST/exponerade scheman, Edge Function, GitHub-secrets och publicering måste senare kontrolleras av projektägaren i rätt miljö. Ingen skarp synk, SQL-körning, import eller publicering har gjorts i denna uppgift.
 
 ## Integritet och radering
 
@@ -257,3 +257,25 @@ Använd MUI:s `Button`, `TextField`, `Card`, `Alert`, `Accordion`, `Dialog`, `Ta
 Integritetsdialogen använder MUI:s fokuslås och återställer fokus vid stängning. Navigation och ikonknappar har tillgängliga namn; en hoppa-till-innehåll-länk kan nås med tangentbord. Den breda fördelningstabellen är tangentbordsfokuserbar och kan rullas i sidled. Kontrollera fortfarande innehåll, nya flöden, skärmläsning och zoom manuellt; ett komponentbibliotek garanterar inte i sig att appen uppfyller alla riktlinjer.
 
 Administration, informationssidan och Excel-läsning laddas vid behov. MUI och Supabase byggs som separata cachebara paketdelar. Inga databasändringar behövs för MUI-bytet.
+
+## Inloggning, nya konton och lösenordsåterställning
+
+Inloggningssidan visas först för utloggade besökare och har ingen lagmeny. En redan inloggad och godkänd användare kan fortsätta direkt till sitt lag. **Skapa konto** använder Supabase `signUp`, **Logga in** använder `signInWithPassword`, och **Glömt lösenord** använder `resetPasswordForEmail`. Inga lösenord sparas i apptabeller, Git, loggar eller egen webbläsarlagring. Supabase-klienten hanterar sessionen.
+
+Nya lösenord kräver minst åtta tecken och matchande bekräftelse. Inloggning till befintliga konton tillåter också äldre lösenord; projektets faktiska serverpolicy avgör vad som accepteras. Konton som tidigare bara använde engångslänkar kan välja **Glömt lösenord** för att sätta ett lösenord. Administratörens befintliga inbjudningsfunktion via engångslänk finns kvar, men ger fortfarande inte automatiskt godkänd lagåtkomst.
+
+Återställningsmejlet leder till samma appbas med `?auth=recovery`. Den adressen måste vara tillåten under Supabase Authentication → URL Configuration. Appen känner även igen Supabases `PASSWORD_RECOVERY`-händelse. Under återställningen visas inte lagets data eller navigation. En giltig Auth-session krävs för att spara nytt lösenord med `updateUser`; saknad/utgången länk ger möjlighet att begära en ny. Efter sparande loggas den aktuella webbläsarsessionen ut, återställningsmarkören rensas och användaren får logga in med det nya lösenordet.
+
+Återställningsmeddelandet avslöjar inte om en e-postadress har ett konto. Lösenordsåterställning eller registrering ger aldrig rollen ADMIN eller ett godkänt medlemskap; de befintliga lagreglerna gäller även efter inloggning. Detta kräver **ingen SQL-migration**. Vi ändrar inte projektets Auth-inställningar automatiskt. Prova verklig mejlleverans och tillåtna återadresser med ett eget testkonto före föräldralansering.
+
+`tests/auth.test.ts` kontrollerar basvägar, återställningsmarkörer och lösenordsvalidering. `scripts/auth-browser-check.mjs` testar API-flöden och tillgänglighet med en **fiktiv** Supabase-tjänst; alla externa anrop avbryts eller simuleras. Starta dess separata lokala Vite-testserver så här, utan riktiga nycklar:
+
+```sh
+VITE_SUPABASE_URL=https://auth.seket.invalid VITE_SUPABASE_ANON_KEY=fake-public-test-key VITE_TEAM_ID=20000000-0000-0000-0000-000000000001 npm run dev -- --port 5183 --strictPort
+```
+
+Kör i en annan terminal:
+
+```sh
+APP_URL=http://127.0.0.1:5183 node scripts/auth-browser-check.mjs
+```

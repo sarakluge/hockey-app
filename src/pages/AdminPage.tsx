@@ -1,10 +1,11 @@
+import AdminPanel from "../components/AdminPanel";
+import { Box } from "@mui/material";
 import { Accordion, AccordionSummary, AccordionDetails, Typography } from "@mui/material";
 import { ChevronDown } from "lucide-react";
 import {
   Button,
   Checkbox,
   FormControlLabel,
-  Paper,
   Table,
   TableBody,
   TableCell,
@@ -49,18 +50,41 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
   const activeMatch = matches.find((match) => match.id === selected) || matches[0];
 
   if (!admin)
-    return <div className="empty-state">Endast administratörer har åtkomst.</div>;
+    return (
+      <Box
+        sx={{
+          textAlign: "center",
+          color: "#58677b",
+          padding: "40px 12px",
+          "& svg": { marginBottom: "12px" },
+          "& h2": { fontSize: "1.2rem", margin: "0 0 10px" },
+          "& p": { margin: "0" },
+        }}
+      >
+        Endast administratörer har åtkomst.
+      </Box>
+    );
 
   return (
-    <div className="admin-page">
-      <Paper component="section" variant="outlined" className="panel">
-        <div className="section-heading">
+    <Box>
+      <AdminPanel>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "12px",
+            flexWrap: "wrap",
+            marginBottom: "16px",
+            "& h2": { marginBottom: "0" },
+          }}
+        >
           <h2>Bemanna en match</h2>
           <Badge tone="green">
             <ShieldCheck size={12} />
             Administratör
           </Badge>
-        </div>
+        </Box>
         <SelectField
           label="Välj hemmamatch"
           value={activeMatch?.id || ""}
@@ -87,20 +111,32 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
         ) : (
           <p>Starta matchsynchroniseringen eller importera matchdata först.</p>
         )}
-        <p className="small muted">
+        <Box component="p" sx={{ color: "text.secondary", fontSize: "0.8125rem" }}>
           OVR, klocka och speaker kan bara tilldelas familjer med motsvarande behörighet.
           Flera uppgifter till samma familj förutsätter flera vuxna.
-        </p>
-      </Paper>
-      <Paper component="section" variant="outlined" className="panel">
-        <div className="section-heading">
+        </Box>
+      </AdminPanel>
+      <AdminPanel>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "12px",
+            flexWrap: "wrap",
+            marginBottom: "16px",
+            "& h2": { marginBottom: "0" },
+          }}
+        >
           <h2>Rättvis fördelning</h2>
-          <span className="small muted">Alla importerade matcher</span>
-        </div>
-        <p className="muted">
+          <Box component="span" sx={{ color: "text.secondary", fontSize: "0.8125rem" }}>
+            Alla importerade matcher
+          </Box>
+        </Box>
+        <Box component="p" sx={{ color: "text.secondary" }}>
           Ett tilldelat pass räknas som ett pass. Båsdörr 1 och 2 räknas tillsammans,
           precis som i Excel.
-        </p>
+        </Box>
         <TableContainer
           tabIndex={0}
           role="region"
@@ -130,21 +166,39 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
                       <TableCell key={i}>{c}</TableCell>
                     ))}
                     <TableCell>
-                      <strong className="total-pill">{f.total}</strong>
+                      <Box
+                        component="strong"
+                        sx={{
+                          background: "#edf5ff",
+                          color: "#0b2241",
+                          padding: "4px 8px",
+                          borderRadius: "5px",
+                        }}
+                      >
+                        {f.total}
+                      </Box>
                     </TableCell>
                   </TableRow>
                 ))}
             </TableBody>
           </Table>
         </TableContainer>
-      </Paper>
-      <Paper component="section" variant="outlined" className="panel">
+      </AdminPanel>
+      <AdminPanel>
         <h2>Matchdata & import</h2>
-        <p className="muted">
+        <Box component="p" sx={{ color: "text.secondary" }}>
           Automatisk uppdatering var sjätte timme efter att GitHub och Supabase är
           anslutna.
-        </p>
-        <div className="action-row">
+        </Box>
+        <Box
+          sx={{
+            display: "flex",
+            gap: "12px",
+            flexWrap: "wrap",
+            alignItems: "center",
+            "& > .MuiFormControl-root": { flex: 1, minWidth: "170px" },
+          }}
+        >
           <Button variant="contained" disabled={busy} onClick={() => void sync()}>
             <RefreshCw size={16} />
             Starta Swehockey-synk
@@ -153,8 +207,19 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
             <Download size={16} />
             Exportera data
           </Button>
-        </div>
-        <div className="import-box">
+        </Box>
+        <Box
+          sx={{
+            background: "#f7f9fc",
+            border: "1px dashed #bccbdd",
+            borderRadius: "12px",
+            padding: "24px",
+            margin: "24px 0",
+            textAlign: "center",
+            "& > svg": { display: "block", color: "#365d85", margin: "0 auto 15px" },
+            "& small": { display: "block", marginTop: "10px", color: "#58677b" },
+          }}
+        >
           <Upload size={25} />
           <h3>Importera den befintliga Excel-filen</h3>
           <p>Förhandsgranska, koppla matcher och godkänn innan något sparas.</p>
@@ -174,20 +239,39 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
             onChange={(event) => void readFile(event.target.files?.[0])}
           />
           <small>Originalfilen ändras aldrig. Högst 5 MB.</small>
-        </div>
+        </Box>
         {preview && (
-          <div className="import-preview">
+          <Box
+            sx={{
+              "& .MuiFormControlLabel-root": {
+                display: "flex",
+                marginTop: "12px",
+                marginBottom: "16px",
+              },
+              "& details": { margin: "16px 0" },
+            }}
+          >
             <h3>
               Förhandsvisning: {preview.rows.length} matcher · {preview.families.length}{" "}
               familjer · {preview.instructions.length} instruktioner
             </h3>
-            <ul className="warning-list">
+            <Box
+              component="ul"
+              sx={{ color: "#885400", paddingLeft: "22px", lineHeight: "1.7" }}
+            >
               {preview.warnings.map((w, i) => (
                 <li key={i}>{w}</li>
               ))}
-            </ul>
+            </Box>
             {preview.rows.map((r, index) => (
-              <div className="import-row" key={index}>
+              <Box
+                sx={{
+                  borderTop: "1px solid #dfe6ef",
+                  padding: "20px 0",
+                  "& > .MuiFormControl-root": { margin: "12px 0" },
+                }}
+                key={index}
+              >
                 <strong>
                   {r.label} · {r.opponent}
                 </strong>
@@ -233,9 +317,12 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
                     </option>
                   ))}
                 </SelectField>
-                <p className="small">
+                <Box
+                  component="p"
+                  sx={{ color: "text.secondary", fontSize: "0.8125rem" }}
+                >
                   {r.assignments.map((a) => `${a.role}: ${a.name}`).join(" · ")}
-                </p>
+                </Box>
                 <FormControlLabel
                   control={
                     <Checkbox
@@ -262,7 +349,7 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
                   }
                   label={<> Jag har kontrollerat tävling, lag och match-ID.</>}
                 />
-              </div>
+              </Box>
             ))}
             <Accordion>
               <AccordionSummary expandIcon={<ChevronDown size={20} />}>
@@ -289,7 +376,9 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
                     <h4>
                       {i.title} · {i.arena}
                     </h4>
-                    <p className="instruction-body">{i.body}</p>
+                    <Box component="p" sx={{ whiteSpace: "pre-wrap" }}>
+                      {i.body}
+                    </Box>
                   </div>
                 ))}
               </AccordionDetails>
@@ -326,13 +415,13 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
               Avbryt
             </Button>
             {demo && (
-              <p className="small muted">
+              <Box component="p" sx={{ color: "text.secondary", fontSize: "0.8125rem" }}>
                 Sparande av personuppgifter är avstängt i demoläget.
-              </p>
+              </Box>
             )}
-          </div>
+          </Box>
         )}
-        <div className="sync-history">
+        <Box sx={{ marginTop: "24px" }}>
           <h3>Senaste uppdateringar</h3>
           {data.logs.length ? (
             data.logs
@@ -354,28 +443,45 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
                 </p>
               ))
           ) : (
-            <p className="muted">Ingen synk har körts ännu.</p>
+            <Box component="p" sx={{ color: "text.secondary" }}>
+              Ingen synk har körts ännu.
+            </Box>
           )}
-        </div>
-      </Paper>
-      <Paper component="section" variant="outlined" className="panel">
+        </Box>
+      </AdminPanel>
+      <AdminPanel>
         <h2>Användare & godkännande</h2>
         <InviteUser demo={demo} onDone={() => void load()} />
-        <p className="muted">
+        <Box component="p" sx={{ color: "text.secondary" }}>
           Be föräldrar logga in en gång. Godkänn sedan kontot och koppla det till rätt
           familj.
-        </p>
+        </Box>
         {demo ? (
           <p>Riktiga användare visas efter att Supabase har anslutits.</p>
         ) : (
           data.profiles.map((p) => (
-            <div className="profile-row" key={p.id}>
+            <Box
+              sx={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "12px",
+                alignItems: "center",
+                padding: "20px 0",
+                borderTop: "1px solid #dfe6ef",
+                "& > div:first-child": { flexBasis: "100%", overflowWrap: "anywhere" },
+                "& > .MuiFormControl-root": { flex: "1", minWidth: "150px" },
+              }}
+              key={p.id}
+            >
               <div>
                 <strong>{p.email}</strong>
-                <p className="small muted">
+                <Box
+                  component="p"
+                  sx={{ color: "text.secondary", fontSize: "0.8125rem" }}
+                >
                   {p.approved ? "Godkänd" : "Väntar på godkännande"} ·{" "}
                   {p.role === "ADMIN" ? "Administratör" : "Förälder"}
-                </p>
+                </Box>
               </div>
               <SelectField
                 label={`Familj för ${p.email}`}
@@ -418,16 +524,16 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
               >
                 {p.approved ? "Återkalla" : "Godkänn"}
               </Button>
-            </div>
+            </Box>
           ))
         )}
-      </Paper>
+      </AdminPanel>
       <ManualImport
         onDone={() => void load()}
         demo={demo}
         homeTeam={app.team?.home_team || "Team Söderort(FOC/THH)"}
         competitions={app.competitions.map((item) => item.competition)}
       />
-    </div>
+    </Box>
   );
 }

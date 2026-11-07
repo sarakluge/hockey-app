@@ -1,3 +1,4 @@
+import { Box } from "@mui/material";
 import {
   Accordion,
   AccordionSummary,
@@ -22,13 +23,32 @@ export default function InfoPage({ app }: { app: HockeyApp }) {
         <>
           {instructions.length ? (
             instructions.map((instruction, index) => (
-              <section className="guide-section" key={instruction.id || index}>
+              <Box
+                component="section"
+                sx={{
+                  "& + section": {
+                    paddingTop: "16px",
+                    marginTop: "16px",
+                    borderTop: "1px solid #dfe6ef",
+                  },
+                  "& h3": { fontSize: "1rem", margin: "0" },
+                  "& > p:last-child": { whiteSpace: "pre-wrap" },
+                }}
+                key={instruction.id || index}
+              >
                 <h3>{instruction.title}</h3>
-                <p className="guide-arena">
+                <Box
+                  component="p"
+                  sx={{
+                    color: "text.secondary",
+                    fontSize: "0.8125rem",
+                    "&&": { mt: "5px" },
+                  }}
+                >
                   {instruction.arena} · {instruction.role}
-                </p>
+                </Box>
                 <p>{instruction.body}</p>
-              </section>
+              </Box>
             ))
           ) : (
             <p>Lagets administratör behöver lägga in de godkända instruktionerna.</p>
@@ -106,25 +126,33 @@ export default function InfoPage({ app }: { app: HockeyApp }) {
 
   return (
     <>
-      <div className="info-list">
+      <Box sx={{ display: "grid", gap: "20px" }}>
         {sections.map(({ title, Icon, content }, index) => (
-          <Accordion className="info-card" key={title} defaultExpanded={index === 0}>
+          <Accordion key={title} defaultExpanded={index === 0}>
             <AccordionSummary
               expandIcon={<ChevronDown size={22} />}
               id={`info-${index}-header`}
               aria-controls={`info-${index}-content`}
             >
-              <Icon size={25} color="#0065cc" />
+              <Icon size={25} color="currentColor" />
               <Typography component="h2" variant="h2">
                 {title}
               </Typography>
             </AccordionSummary>
-            <AccordionDetails id={`info-${index}-content`} className="info-body">
+            <AccordionDetails
+              id={`info-${index}-content`}
+              sx={{
+                lineHeight: "1.7",
+                "& p": { margin: "0 0 14px" },
+                "& ul": { paddingLeft: "22px" },
+                "& > button": { marginRight: "10px" },
+              }}
+            >
               {content}
             </AccordionDetails>
           </Accordion>
         ))}
-      </div>
+      </Box>
       {privacyOpen && <PrivacyDialog onClose={() => setPrivacyOpen(false)} />}
     </>
   );

@@ -25,7 +25,7 @@ import {
 import { useHockeyApp } from "./hooks/useHockeyApp";
 import { formatDate } from "./lib/types";
 import HockeyMark from "./components/HockeyMark";
-import LoginPanel from "./components/LoginPanel";
+import AuthPage from "./pages/AuthPage";
 import MatchesPage from "./pages/MatchesPage";
 import MyShiftsPage from "./pages/MyShiftsPage";
 const InfoPage = lazy(() => import("./pages/InfoPage"));
@@ -58,6 +58,10 @@ export default function App() {
     window.addEventListener("hashchange", updatePage);
     return () => window.removeEventListener("hashchange", updatePage);
   }, []);
+
+  if (!access || app.recoveringPassword) {
+    return <AuthPage app={app} />;
+  }
 
   return (
     <Box sx={{ minHeight: "100dvh", pb: "calc(96px + env(safe-area-inset-bottom))" }}>
@@ -130,8 +134,6 @@ export default function App() {
               <CircularProgress aria-label="Hämtar laguppgifter" />
               <Typography>Hämtar ditt lag…</Typography>
             </Stack>
-          ) : !access ? (
-            <LoginPanel app={app} />
           ) : (
             <Suspense fallback={<CircularProgress aria-label="Hämtar sida" />}>
               {page === "matcher" && <MatchesPage app={app} />}

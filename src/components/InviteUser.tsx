@@ -1,3 +1,4 @@
+import { Box } from "@mui/material";
 import { Button, TextField } from "@mui/material";
 import { useState } from "react";
 import { Mail } from "lucide-react";
@@ -35,8 +36,16 @@ export default function InviteUser({
     }
   }
   return (
-    <form className="invite-form" onSubmit={invite}>
-      <div className="action-row">
+    <Box component="form" sx={{ margin: "20px 0" }} onSubmit={invite}>
+      <Box
+        sx={{
+          display: "flex",
+          gap: "12px",
+          flexWrap: "wrap",
+          alignItems: "center",
+          "& > .MuiFormControl-root": { flex: 1, minWidth: "170px" },
+        }}
+      >
         <TextField
           label="Bjud in förälder med engångslänk"
           id="invite-email"
@@ -50,8 +59,8 @@ export default function InviteUser({
           <Mail size={16} />
           Skicka inbjudan
         </Button>
-      </div>
+      </Box>
       {message && <p role="status">{message}</p>}
-    </form>
+    </Box>
   );
 }

@@ -4,7 +4,12 @@ import { svSE } from "@mui/material/locale";
 export const theme = createTheme(
   {
     palette: {
-      primary: { main: "#0065cc", dark: "#004b99" },
+      primary: {
+        main: "#0b2241",
+        light: "#99c9ff",
+        dark: "#06162c",
+        contrastText: "#ffffff",
+      },
       secondary: { main: "#5941b6" },
       background: { default: "#f5f7fb", paper: "#ffffff" },
       text: { primary: "#10223e", secondary: "#58677b" },
@@ -26,7 +31,7 @@ export const theme = createTheme(
           ":root": { fontSynthesis: "none" },
           html: { scrollbarGutter: "stable" },
           "a, button": { WebkitTapHighlightColor: "transparent" },
-          ":focus-visible": { outline: "3px solid #0065cc", outlineOffset: 3 },
+          ":focus-visible": { outline: "3px solid #0b2241", outlineOffset: 3 },
           "@media (prefers-reduced-motion: reduce)": {
             "*, *::before, *::after": {
               animationDuration: "0.01ms !important",
