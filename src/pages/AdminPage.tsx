@@ -22,6 +22,7 @@ import { distribution, formatDate, type Profile } from "../lib/types";
 import Badge from "../components/Badge";
 import Staffing from "../components/Staffing";
 import InviteUser from "../components/InviteUser";
+import UserApprovalCard from "../components/UserApprovalCard";
 
 export default function AdminPage({ app }: { app: HockeyApp }) {
   const {
@@ -38,6 +39,42 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
   } = app;
   const [playerNames, setPlayerNames] = useState("");
   const [selected, setSelected] = useState("");
+  const [onlyMissingAccounts, setOnlyMissingAccounts] = useState(false);
+  const [userSort, setUserSort] = useState("parent");
+  const linkedPlayerNames = new Map(
+    data.families.map((player) => [player.id, player.name]),
+  );
+  const parentName = (profile: Profile) => profile.parent_name?.trim() || profile.email;
+  const waitingUsers = data.profiles.filter((profile) => !profile.approved);
+  const approvedUsers = data.profiles
+    .filter((profile) => profile.approved)
+    .sort((a, b) => {
+      if (userSort === "child") {
+        const aChild = linkedPlayerNames.get(a.family_id || "") || "";
+        const bChild = linkedPlayerNames.get(b.family_id || "") || "";
+        // Keep approved accounts without a linked player last.
+        if (Boolean(aChild) !== Boolean(bChild)) return aChild ? -1 : 1;
+        const byChild = aChild.localeCompare(bChild, "sv");
+        if (byChild) return byChild;
+      }
+      return (
+        parentName(a).localeCompare(parentName(b), "sv") ||
+        a.email.localeCompare(b.email, "sv") ||
+        a.id.localeCompare(b.id)
+      );
+    });
+  const playersWithAccounts = [...data.families]
+    .sort((a, b) => a.name.localeCompare(b.name, "sv"))
+    .map((player) => ({
+      player,
+      parents: data.profiles.filter((profile) => profile.family_id === player.id),
+    }));
+  const missingAccounts = playersWithAccounts.filter(
+    ({ parents }) => !parents.length,
+  ).length;
+  const pendingAccounts = playersWithAccounts.filter(
+    ({ parents }) => parents.length > 0 && !parents.some((parent) => parent.approved),
+  ).length;
   const matches = [...data.matches].sort((first, second) =>
     (first.starts_at || "9999").localeCompare(second.starts_at || "9999"),
   );
@@ -106,7 +143,15 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
           match.
         </Box>
       </AdminPanel>
-      <AdminPanel title="Spelare" summary={`${data.families.length}`}>
+      <AdminPanel
+        title="Spelare"
+        summary={
+          demo
+            ? `${data.families.length} spelare · demo`
+            : `${data.families.length} spelare · ${missingAccounts} saknar kopplat konto`
+        }
+        attention={!demo && missingAccounts > 0}
+      >
         <p>
           Lägg in barnens för- och efternamn, ett namn per rad. Flera föräldrar kan
           kopplas till samma spelare.
@@ -137,11 +182,62 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
           </Button>
         </Box>
         {!data.families.length && <p>Inga spelare tillagda ännu.</p>}
-        {[...data.families]
-          .sort((a, b) => a.name.localeCompare(b.name, "sv"))
-          .map((player) => (
+        <Box component="p" sx={{ mt: 2, color: "text.secondary" }}>
+          {demo
+            ? "Demoläge – riktiga kontokopplingar visas när Supabase är anslutet."
+            : `${data.families.length - missingAccounts} av ${data.families.length} spelare har ett kopplat konto. ${pendingAccounts} har bara konton som väntar på godkännande.`}
+        </Box>
+        <Box component="p" sx={{ color: "text.secondary" }}>
+          Saknar kopplat konto betyder att ingen förälder har kopplats till spelaren.
+          Kontrollera även Användare & godkännande innan du påminner familjen – ett
+          registrerat konto kan fortfarande sakna spelarkoppling.
+        </Box>
+        <FormControlLabel
+          label={`Visa bara spelare som saknar kopplat konto${demo ? "" : ` (${missingAccounts})`}`}
+          control={
+            <Checkbox
+              checked={onlyMissingAccounts}
+              onChange={(event) => setOnlyMissingAccounts(event.target.checked)}
+              disabled={demo}
+            />
+          }
+        />
+        {onlyMissingAccounts && !missingAccounts && data.families.length > 0 && (
+          <p>Alla spelare har minst ett kopplat konto.</p>
+        )}
+        {playersWithAccounts
+          .filter(({ parents }) => !onlyMissingAccounts || !parents.length)
+          .map(({ player, parents }) => (
             <Box key={player.id} sx={{ py: 2, borderBottom: "1px solid #dfe6ef" }}>
-              <strong>{player.name}</strong>
+              <Box
+                sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 1 }}
+              >
+                <strong>{player.name}</strong>
+                {!demo && (
+                  <Badge
+                    tone={parents.some((parent) => parent.approved) ? "green" : "amber"}
+                  >
+                    {!parents.length
+                      ? "Saknar kopplat konto"
+                      : parents.some((parent) => parent.approved)
+                        ? "Godkänt konto kopplat"
+                        : "Väntar på godkännande"}
+                  </Badge>
+                )}
+              </Box>
+              {!demo && parents.length > 0 && (
+                <Box component="ul" sx={{ my: 1, pl: 2.5, overflowWrap: "anywhere" }}>
+                  {parents.map((parent) => (
+                    <li key={parent.id}>
+                      {parent.parent_name
+                        ? `${parent.parent_name} (${parent.email})`
+                        : parent.email}
+                      {" · "}
+                      {parent.approved ? "Godkänd" : "Väntar på godkännande"}
+                    </li>
+                  ))}
+                </Box>
+              )}
               <Box sx={{ display: "flex", flexWrap: "wrap" }}>
                 {(
                   [
@@ -325,80 +421,62 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
         {demo ? (
           <p>Riktiga användare visas efter att Supabase har anslutits.</p>
         ) : (
-          data.profiles.map((p) => (
-            <Box
-              sx={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: "12px",
-                alignItems: "center",
-                padding: "20px 0",
-                borderTop: "1px solid #dfe6ef",
-                "& > div:first-child": { flexBasis: "100%", overflowWrap: "anywhere" },
-                "& > .MuiFormControl-root": { flex: "1", minWidth: "150px" },
-              }}
-              key={p.id}
-            >
-              <div>
-                <strong>{p.parent_name || p.email}</strong>
-                {p.parent_name && <div>{p.email}</div>}
-                <div>
-                  {p.family_id
-                    ? `Förälder till ${data.families.find((f) => f.id === p.family_id)?.name || "okänd spelare"}`
-                    : "Ingen spelarkoppling"}
-                </div>
-                {p.child_name && <div>Angivet barn vid registrering: {p.child_name}</div>}
+          <Box>
+            {[
+              { id: "waiting", title: "Väntar på godkännande", users: waitingUsers },
+              { id: "approved", title: "Godkända användare", users: approvedUsers },
+            ].map((group) => (
+              <Box
+                component="section"
+                key={group.id}
+                aria-labelledby={`${group.id}-users-heading`}
+              >
                 <Box
-                  component="p"
-                  sx={{ color: "text.secondary", fontSize: "0.8125rem" }}
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: 2,
+                    mt: 2,
+                    mb: 2,
+                  }}
                 >
-                  {p.approved ? "Godkänd" : "Väntar på godkännande"} ·{" "}
-                  {p.role === "ADMIN" ? "Administratör" : "Förälder"}
+                  <Box component="h3" id={`${group.id}-users-heading`} sx={{ m: 0 }}>
+                    {group.title} ({group.users.length})
+                  </Box>
+                  {group.id === "approved" && (
+                    <SelectField
+                      label="Sortera användare efter"
+                      value={userSort}
+                      onChange={(event) => setUserSort(event.target.value)}
+                      sx={{ width: { xs: "100%", sm: 250 }, ml: "auto" }}
+                    >
+                      <option value="parent">Förälderns namn</option>
+                      <option value="child">Kopplat barns namn</option>
+                    </SelectField>
+                  )}
                 </Box>
-              </div>
-              <SelectField
-                label={`Spelare för ${p.parent_name || p.email}`}
-                value={p.family_id || ""}
-                disabled={busy}
-                onChange={(e) =>
-                  void updateProfile(p.id, {
-                    family_id: e.target.value || null,
-                  })
-                }
-              >
-                <option value="">Ingen spelarkoppling</option>
-                {data.families.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.name}
-                  </option>
+                {group.users.length === 0 && (
+                  <Box component="p" sx={{ color: "text.secondary" }}>
+                    {group.id === "waiting"
+                      ? "Inga användare väntar på godkännande."
+                      : "Inga godkända användare ännu."}
+                  </Box>
+                )}
+                {group.users.map((profile) => (
+                  <UserApprovalCard
+                    key={profile.id}
+                    profile={profile}
+                    families={data.families}
+                    busy={busy}
+                    userId={userId}
+                    onUpdate={updateProfile}
+                  />
                 ))}
-              </SelectField>
-              <SelectField
-                label={`Roll för ${p.email}`}
-                disabled={busy || p.id === userId}
-                value={p.role}
-                onChange={(e) =>
-                  void updateProfile(p.id, {
-                    role: e.target.value as Profile["role"],
-                  })
-                }
-              >
-                <option value="PARENT">Förälder</option>
-                <option value="ADMIN">Administratör</option>
-              </SelectField>
-              <Button
-                variant="outlined"
-                disabled={busy || p.id === userId}
-                onClick={() =>
-                  void updateProfile(p.id, {
-                    approved: !p.approved,
-                  })
-                }
-              >
-                {p.approved ? "Återkalla" : "Godkänn"}
-              </Button>
-            </Box>
-          ))
+              </Box>
+            ))}
+          </Box>
         )}
       </AdminPanel>
     </Box>

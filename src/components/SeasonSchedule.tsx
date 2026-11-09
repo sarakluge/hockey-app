@@ -10,6 +10,7 @@ import {
   TableCell,
   TableHead,
   TableRow,
+  Typography,
 } from "@mui/material";
 import type { HockeyApp } from "../hooks/useHockeyApp";
 import { distribution, eligible, formatDate, ROLES, type Assignment } from "../lib/types";
@@ -44,27 +45,41 @@ export default function SeasonSchedule({ app }: { app: HockeyApp }) {
     : 0;
   return (
     <AdminPanel title="Skapa schema" summary={`${matches.length} kommande matcher`}>
+      <Typography variant="body1"> Skapa ett förslag för hela säsongens kommande matcher. </Typography>
       <Box component="ul" sx={{ pl: 2.5, mt: 0, mb: 2, "& li": { mb: 1 } }}>
-        <li>Skapa ett förslag för hela säsongens kommande matcher.</li>
         <li>
+          <Typography variant="body2" component="span">
           OVR, klocka och speaker/musik bemannas först med familjer som valt uppgiften.
+          </Typography>
         </li>
         <li>
+          <Typography variant="body2" component="span">
           Förslaget tar hänsyn till otillgänglighet och fördelar passen utifrån tidigare
           tilldelningar, variation och spridning över säsongen.
+          </Typography>
         </li>
         <li>
+          <Typography variant="body2" component="span">
           Automatisk schemaläggning ger högst ett pass per familj och match. Du kan
           manuellt ge samma familj flera positioner.
+          </Typography>
         </li>
-        <li>Familjer som markerats som undantagna väljs bara manuellt av admin.</li>
         <li>
+          <Typography variant="body2" component="span">
+          Familjer som markerats som undantagna väljs bara manuellt av admin.
+          </Typography>
+          </li>
+        <li>
+          <Typography variant="body2" component="span">
           Genomförda pass, låsta pass och pass med pågående ersättarsökning bevaras
           alltid.
+          </Typography>
         </li>
         <li>
+          <Typography variant="body2" component="span">
           Granska förslaget, ändra manuellt eller generera ett nytt. Familjerna ser de nya
           passen först när du klickar på ”Godkänn och publicera schema”.
+          </Typography>
         </li>
       </Box>
       <FormControlLabel

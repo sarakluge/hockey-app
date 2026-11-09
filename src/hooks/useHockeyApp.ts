@@ -512,6 +512,7 @@ export function useHockeyApp() {
       await load();
     }
     setBusy(false);
+    return !error;
   }
   async function saveMyDutyRoles(roles: string[]) {
     if (!roles.length) throw new Error("Välj minst en uppgift.");
