@@ -1,3 +1,4 @@
+import AppSnackbar from "./components/AppSnackbar";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { CalendarDays, UserRound, Info, RefreshCw, ArrowLeft } from "lucide-react";
 import {
@@ -114,6 +115,7 @@ export default function App() {
 
   return (
     <Box sx={{ minHeight: "100dvh", pb: "calc(96px + env(safe-area-inset-bottom))" }}>
+      <AppSnackbar app={app} />
       <Button href="#main-content" className="skip-link" variant="contained">
         Hoppa till innehåll
       </Button>
@@ -216,18 +218,6 @@ export default function App() {
               }
             >
               {latestReplacementNotice.message}
-            </Alert>
-          )}
-          {(app.message || app.error) && (
-            <Alert
-              severity={app.error ? "error" : "success"}
-              role={app.error ? "alert" : "status"}
-              onClose={() => {
-                app.setError("");
-                app.setMessage("");
-              }}
-            >
-              {app.error || app.message}
             </Alert>
           )}
           {app.loading ? (

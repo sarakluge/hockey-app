@@ -1,3 +1,4 @@
+import AppSnackbar from "../components/AppSnackbar";
 import { useState } from "react";
 import {
   Alert,
@@ -160,18 +161,7 @@ export default function AuthPage({ app }: { app: HockeyApp }) {
                       : description}
                 </Typography>
               </Box>
-              {(app.error || app.message) && (
-                <Alert
-                  severity={app.error ? "error" : "success"}
-                  role={app.error ? "alert" : "status"}
-                  onClose={() => {
-                    app.setError("");
-                    app.setMessage("");
-                  }}
-                >
-                  {app.error || app.message}
-                </Alert>
-              )}
+              <AppSnackbar app={app} />
               {app.loading ? (
                 <Stack role="status" sx={{ alignItems: "center", py: 3 }} spacing={2}>
                   <CircularProgress aria-label="Kontrollerar inloggning" />
