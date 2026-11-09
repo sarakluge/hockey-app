@@ -1,3 +1,4 @@
+import { instructionRole } from "../lib/instructions";
 import InstructionEditor from "../components/InstructionEditor";
 import SeasonSchedule from "../components/SeasonSchedule";
 import ReplacementSearches from "../components/ReplacementSearches";
@@ -106,7 +107,7 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
       <SeasonSchedule app={app} />
       <AdminPanel
         title="Instruktioner & guider"
-        summary={`${data.instructions.length} instruktioner`}
+        summary={`${new Set(data.instructions.map((item) => instructionRole(item.role))).size} instruktioner`}
       >
         <InstructionEditor app={app} />
       </AdminPanel>
