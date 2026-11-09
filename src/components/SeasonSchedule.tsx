@@ -29,11 +29,25 @@ export default function SeasonSchedule({ app }: { app: HockeyApp }) {
   const [base, setBase] = useState<Assignment[]>([]);
   const [seed, setSeed] = useState(0);
   const [selected, setSelected] = useState("");
+  const [showUnchanged, setShowUnchanged] = useState(false);
   const { data, busy } = app;
   const matches = data.matches
     .filter((m) => schedulable(m))
     .sort((a, b) => a.starts_at!.localeCompare(b.starts_at!));
-  const match = matches.find((m) => m.id === selected) || matches[0];
+  const originalSlots = new Map(base.map((a) => [slotKey(a), a]));
+  const draftSlots = new Map((draft || []).map((a) => [slotKey(a), a]));
+  const changedSlot = (match_id: string, role: Assignment["role"]) => {
+    const key = slotKey({ match_id, role });
+    const original = originalSlots.get(key);
+    const proposed = draftSlots.get(key);
+    return original?.family_id !== proposed?.family_id ||
+      !!original?.locked !== !!proposed?.locked;
+  };
+  const changedMatches = draft
+    ? matches.filter((m) => ROLES.some((role) => changedSlot(m.id, role)))
+    : [];
+  const previewMatches = showUnchanged ? matches : changedMatches;
+  const match = previewMatches.find((m) => m.id === selected) || previewMatches[0];
   const missing = draft
     ? matches.reduce(
         (n, m) =>
@@ -103,6 +117,8 @@ export default function SeasonSchedule({ app }: { app: HockeyApp }) {
         onClick={() => {
           setBase(data.assignments);
           setDraft(generateSchedule(data, redo, seed));
+          setShowUnchanged(false);
+          setSelected("");
           setSeed(seed + 1);
         }}
       >
@@ -111,19 +127,31 @@ export default function SeasonSchedule({ app }: { app: HockeyApp }) {
       </Button>
       {draft && (
         <Box sx={{ display: "grid", gap: 2, mt: 2 }}>
-          <Alert severity={missing ? "warning" : "success"}>
+          <Alert severity={!changedMatches.length ? "info" : missing ? "warning" : "success"}>
+            {changedMatches.length
+              ? `${changedMatches.length} matcher har ändringar att publicera.`
+              : "Inga nya tilldelningar att publicera."}{" "}
             {missing
-              ? `${missing} obemannade positioner. De visas som Ej tillsatt i matchlistan nedan.`
+              ? `${missing} obemannade positioner totalt i kommande matcher. Välj ”Visa även oförändrade matcher” för att granska alla.`
               : "Alla positioner är bemannade."}{" "}
             Förslaget visas för familjerna först när du publicerar. Manuella ändringar
             låses automatiskt.
           </Alert>
-          <SelectField
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={showUnchanged}
+                onChange={(e) => setShowUnchanged(e.target.checked)}
+              />
+            }
+            label="Visa även oförändrade matcher"
+          />
+          {previewMatches.length > 0 && <SelectField
             label="Förhandsgranska match"
             value={match?.id || ""}
             onChange={(e) => setSelected(e.target.value)}
           >
-            {matches.map((m) => (
+            {previewMatches.map((m) => (
               <option key={m.id} value={m.id}>
                 {formatDate(m.starts_at!, { day: "numeric", month: "short" })} ·{" "}
                 {m.away_team} ·{" "}
@@ -135,7 +163,7 @@ export default function SeasonSchedule({ app }: { app: HockeyApp }) {
                 obemannade
               </option>
             ))}
-          </SelectField>
+          </SelectField>}
           {match &&
             ROLES.map((role) => {
               const a = draft.find((a) => a.match_id === match.id && a.role === role);
@@ -146,7 +174,7 @@ export default function SeasonSchedule({ app }: { app: HockeyApp }) {
               return (
                 <Box key={role} sx={{ display: "flex", gap: 1, alignItems: "center" }}>
                   <SelectField
-                    label={role}
+                    label={`${role}${changedSlot(match.id, role) ? !original && a ? " · Ny tilldelning" : " · Ändrad" : ""}`}
                     value={a?.family_id || ""}
                     disabled={busy || !!protectedSlot}
                     onChange={(e) =>
@@ -233,7 +261,7 @@ export default function SeasonSchedule({ app }: { app: HockeyApp }) {
           </Box>
           <Button
             variant="contained"
-            disabled={busy}
+            disabled={busy || !changedMatches.length}
             onClick={async () => {
               if (await app.publishSchedule(base, draft)) setDraft(null);
             }}
