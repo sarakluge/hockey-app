@@ -1,3 +1,4 @@
+import InstructionEditor from "../components/InstructionEditor";
 import SeasonSchedule from "../components/SeasonSchedule";
 import ReplacementSearches from "../components/ReplacementSearches";
 import AdminPanel from "../components/AdminPanel";
@@ -103,6 +104,12 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
   return (
     <Box>
       <SeasonSchedule app={app} />
+      <AdminPanel
+        title="Instruktioner & guider"
+        summary={`${data.instructions.length} instruktioner`}
+      >
+        <InstructionEditor app={app} />
+      </AdminPanel>
       <AdminPanel
         title="Ersättarsökningar"
         summary={`${activeSearches} pågående`}

@@ -1,3 +1,4 @@
+import { uniqueInstructionArenas } from "../lib/instructions";
 import { Box } from "@mui/material";
 import {
   Accordion,
@@ -7,90 +8,15 @@ import {
   Typography,
 } from "@mui/material";
 import { useState } from "react";
-import { Users, FileText, CarFront, MapPin, Info, ChevronDown } from "lucide-react";
+import { MapPin, Info, ChevronDown } from "lucide-react";
 import type { HockeyApp } from "../hooks/useHockeyApp";
+import RoleInstructions from "../components/RoleInstructions";
 import PrivacyDialog from "../components/PrivacyDialog";
 
 export default function InfoPage({ app }: { app: HockeyApp }) {
   const [privacyOpen, setPrivacyOpen] = useState(false);
-  const instructions = app.data.instructions;
-  const arenas = [...new Set(app.data.matches.map((match) => match.arena))];
+  const arenas = uniqueInstructionArenas(app.data.matches.map((match) => match.arena));
   const sections = [
-    {
-      title: "Sekretariatsrutiner",
-      Icon: Users,
-      content: (
-        <>
-          {instructions.length ? (
-            instructions.map((instruction, index) => (
-              <Box
-                component="section"
-                sx={{
-                  "& + section": {
-                    paddingTop: "16px",
-                    marginTop: "16px",
-                    borderTop: "1px solid #dfe6ef",
-                  },
-                  "& h3": { fontSize: "1rem", margin: "0" },
-                  "& > p:last-child": { whiteSpace: "pre-wrap" },
-                }}
-                key={instruction.id || index}
-              >
-                <h3>{instruction.title}</h3>
-                <Box
-                  component="p"
-                  sx={{
-                    color: "text.secondary",
-                    fontSize: "0.8125rem",
-                    "&&": { mt: "5px" },
-                  }}
-                >
-                  {instruction.arena} · {instruction.role}
-                </Box>
-                <p>{instruction.body}</p>
-              </Box>
-            ))
-          ) : (
-            <p>Lagets administratör behöver lägga in de godkända instruktionerna.</p>
-          )}
-        </>
-      ),
-    },
-    {
-      title: "Lathund sekretariatet",
-      Icon: FileText,
-      content: (
-        <>
-          <p>Anteckningsmallen från Excel innehåller följande kolumner:</p>
-          <ul>
-            <li>Tid</li>
-            <li>Spelarnummer och spelarnamn</li>
-            <li>Händelse</li>
-            <li>Lag</li>
-          </ul>
-          <p>Följ lagets godkända rutin för matchrapportering.</p>
-        </>
-      ),
-    },
-    {
-      title: "Matchvärd",
-      Icon: CarFront,
-      content: (
-        <>
-          {instructions
-            .filter((item) => item.role === "Matchvärd")
-            .map((item, index) => (
-              <p key={index}>{item.body}</p>
-            ))}
-          {!instructions.some((item) => item.role === "Matchvärd") && (
-            <p>
-              Kontakta lagledaren för matchvärdens uppgifter och samlingstid. Ingen
-              särskild matchvärdsinstruktion fanns i arbetsboken.
-            </p>
-          )}
-        </>
-      ),
-    },
     {
       title: "Arena",
       Icon: MapPin,
@@ -127,8 +53,9 @@ export default function InfoPage({ app }: { app: HockeyApp }) {
   return (
     <>
       <Box sx={{ display: "grid", gap: "20px" }}>
+        <RoleInstructions instructions={app.data.instructions} arenas={arenas} />
         {sections.map(({ title, Icon, content }, index) => (
-          <Accordion key={title} defaultExpanded={index === 0}>
+          <Accordion key={title} defaultExpanded={false}>
             <AccordionSummary
               expandIcon={<ChevronDown size={22} />}
               id={`info-${index}-header`}

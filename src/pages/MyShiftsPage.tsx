@@ -1,8 +1,10 @@
+import { roleIcon } from "../lib/roleIcons";
 import { Box } from "@mui/material";
 import { Alert, Button } from "@mui/material";
-import { Mic, Timer, ClipboardList } from "lucide-react";
+import { ClipboardList } from "lucide-react";
 import type { HockeyApp } from "../hooks/useHockeyApp";
 import ReplacementSearches, { FindReplacement } from "../components/ReplacementSearches";
+import { instructionHref } from "../lib/instructions";
 import MatchCard from "../components/MatchCard";
 
 export default function MyShiftsPage({ app }: { app: HockeyApp }) {
@@ -41,12 +43,7 @@ export default function MyShiftsPage({ app }: { app: HockeyApp }) {
         return (
           <MatchCard key={match.id} match={match} data={app.data} showStaffing={false}>
             {ownAssignments.map((assignment) => {
-              const Icon =
-                assignment.role === "Klockan"
-                  ? Timer
-                  : assignment.role === "Speaker/Musik"
-                    ? Mic
-                    : ClipboardList;
+              const Icon = roleIcon(assignment.role);
               return (
                 <Box key={assignment.role}>
                   <Button
@@ -57,7 +54,7 @@ export default function MyShiftsPage({ app }: { app: HockeyApp }) {
                     }}
                     variant="outlined"
                     fullWidth
-                    href="#instruktioner"
+                    href={instructionHref(assignment.role, match.arena)}
                     key={assignment.role}
                     startIcon={<Icon size={25} />}
                   >

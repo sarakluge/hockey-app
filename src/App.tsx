@@ -37,7 +37,7 @@ const tabs = [
 ];
 
 function currentPage() {
-  const hash = window.location.hash.slice(1);
+  const hash = window.location.hash.slice(1).split("?")[0];
   if (hash === "bemanning") return "matcher";
   return [...tabs.map((tab) => tab.id), "admin", "profil"].includes(hash)
     ? hash

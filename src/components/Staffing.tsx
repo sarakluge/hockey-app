@@ -1,16 +1,7 @@
 import { Alert, Box } from "@mui/material";
 import SelectField from "./SelectField";
-import { DoorOpen, Monitor, Mic, Timer, Users } from "lucide-react";
+import { roleIcon } from "../lib/roleIcons";
 import { eligible, ROLES, type Data, type Match, type Role } from "../lib/types";
-
-const roleIcons = {
-  "Båsdörr 1": DoorOpen,
-  "Båsdörr 2": DoorOpen,
-  OVR: Monitor,
-  Klockan: Timer,
-  "Speaker/Musik": Mic,
-  Matchvärd: Users,
-};
 
 interface StaffingProps {
   match: Match;
@@ -41,7 +32,7 @@ export default function Staffing({ match, data, busy, onAssign }: StaffingProps)
           (item) => item.match_id === match.id && item.role === role,
         );
         const family = data.families.find((item) => item.id === assignment?.family_id);
-        const Icon = roleIcons[role];
+        const Icon = roleIcon(role);
 
         return (
           <Box

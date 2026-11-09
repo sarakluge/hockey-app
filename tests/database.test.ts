@@ -55,6 +55,8 @@ test("Empty-project migrations and team isolation without automatic grants", asy
       "004_profile_roles.sql",
       "005_family_unavailability.sql",
       "006_shift_replacements.sql",
+      "011_instruction_guides.sql",
+      "012_instruction_role_editor.sql",
     ]) {
       await db.exec(await readFile(`supabase/migrations/${file}`, "utf8"));
     }
@@ -500,6 +502,167 @@ test("Empty-project migrations and team isolation without automatic grants", asy
           0,
         );
         assert.equal((await db.query("select * from public.assignments")).rows.length, 0);
+      },
+    );
+
+    await t.test("instruction guides are editable only by the team's admin", async () => {
+      await login("authenticated", ADMIN_A);
+      await db.query(
+        "update public.instructions set phase = 'before', guide_url = 'https://example.org/ovr', guide_label = 'OVR-guide' where team_id = $1",
+        [TEAM_A],
+      );
+      await assert.rejects(
+        db.query(
+          "update public.instructions set guide_url = 'javascript:alert(1)' where team_id = $1",
+          [TEAM_A],
+        ),
+      );
+      await assert.rejects(
+        db.query("update public.instructions set phase = 'invalid' where team_id = $1", [
+          TEAM_A,
+        ]),
+      );
+      await login("authenticated", PARENT_A);
+      const guide = await db.query<{
+        phase: string;
+        guide_url: string;
+        guide_label: string;
+      }>("select phase, guide_url, guide_label from public.instructions");
+      assert.deepEqual(guide.rows, [
+        {
+          phase: "before",
+          guide_url: "https://example.org/ovr",
+          guide_label: "OVR-guide",
+        },
+      ]);
+      await db.query("update public.instructions set guide_label = 'Changed'");
+      assert.equal(
+        (
+          await db.query<{ guide_label: string }>(
+            "select guide_label from public.instructions",
+          )
+        ).rows[0].guide_label,
+        "OVR-guide",
+      );
+      await login("authenticated", ADMIN_B);
+      assert.equal((await db.query("select * from public.instructions")).rows.length, 0);
+      await db.query("delete from public.instructions where team_id = $1", [TEAM_A]);
+      await login("authenticated", ADMIN_A);
+      assert.equal((await db.query("select * from public.instructions")).rows.length, 1);
+    });
+
+    await t.test(
+      "multiple instruction links migrate and save together with role instructions",
+      async () => {
+        await root();
+        await db.exec(
+          await readFile("supabase/migrations/013_instruction_links.sql", "utf8"),
+        );
+        await login("authenticated", ADMIN_A);
+        const legacy = await db.query<{ links: { url: string; label: string }[] }>(
+          "select links from public.instructions where role = 'OVR'",
+        );
+        assert.deepEqual(legacy.rows[0].links, [
+          { url: "https://example.org/ovr", label: "OVR-guide" },
+        ]);
+        const links = [
+          { url: "https://example.org/manual", label: "Manual" },
+          { url: "https://example.org/film", label: "Film" },
+        ];
+        const save = (team: string, items: unknown[]) =>
+          db.query(
+            "select public.save_role_instructions_with_links($1, 'Matchvärd', $2::jsonb)",
+            [team, JSON.stringify(items)],
+          );
+        const item = { title: "Matchvärd", arena: "", body: "", links };
+        await save(TEAM_A, [item]);
+        assert.deepEqual(
+          (
+            await db.query<{ links: unknown }>(
+              "select links from public.instructions where role = 'Matchvärd'",
+            )
+          ).rows[0].links,
+          links,
+        );
+        await assert.rejects(
+          save(TEAM_A, [
+            { ...item, links: [{ url: "javascript:alert(1)", label: "Bad" }] },
+          ]),
+        );
+        assert.deepEqual(
+          (
+            await db.query<{ links: unknown }>(
+              "select links from public.instructions where role = 'Matchvärd'",
+            )
+          ).rows[0].links,
+          links,
+        );
+        await login("authenticated", PARENT_A);
+        await assert.rejects(save(TEAM_A, []));
+        await login("authenticated", ADMIN_B);
+        await assert.rejects(save(TEAM_A, []));
+        await login("authenticated", ADMIN_A);
+        await save(TEAM_A, [{ ...item, links: [] }]);
+        assert.deepEqual(
+          (
+            await db.query<{ links: unknown }>(
+              "select links from public.instructions where role = 'Matchvärd'",
+            )
+          ).rows[0].links,
+          [],
+        );
+        await save(TEAM_A, []);
+      },
+    );
+
+    await t.test(
+      "one role editor saves all halls atomically and merges door aliases",
+      async () => {
+        await login("authenticated", ADMIN_A);
+        await db.query(
+          "insert into public.instructions (team_id, role, title, arena, body) values ($1, 'Båsdörr 1', 'Doors 1', 'Farsta', 'Old'), ($1, 'Båsdörr 2', 'Doors 2', 'Fontana', 'Old')",
+          [TEAM_A],
+        );
+        const save = (team: string, rows: unknown[]) =>
+          db.query("select public.save_role_instructions($1, 'Båsdörr', $2::jsonb)", [
+            team,
+            JSON.stringify(rows),
+          ]);
+        const rows = [
+          { title: "Före", arena: "Farsta", body: "Montera mål", phase: "before" },
+          { title: "Efter", arena: "Fontana", body: "Ta bort mål", phase: "after" },
+        ];
+        await save(TEAM_A, rows);
+        const doors = await db.query<{ role: string }>(
+          "select role from public.instructions where role like 'Båsdörr%'",
+        );
+        assert.deepEqual(doors.rows, [{ role: "Båsdörr" }, { role: "Båsdörr" }]);
+        await assert.rejects(
+          save(TEAM_A, [{ ...rows[0], guide_url: "javascript:alert(1)" }]),
+        );
+        assert.equal(
+          (await db.query("select * from public.instructions where role = 'Båsdörr'"))
+            .rows.length,
+          2,
+          "invalid part rolls back the whole replacement",
+        );
+        await login("authenticated", PARENT_A);
+        await assert.rejects(save(TEAM_A, []));
+        await login("authenticated", ADMIN_B);
+        await assert.rejects(save(TEAM_A, []));
+        await login("authenticated", ADMIN_A);
+        await save(TEAM_A, []);
+        assert.equal(
+          (await db.query("select * from public.instructions where role like 'Båsdörr%'"))
+            .rows.length,
+          0,
+        );
+        assert.equal(
+          (await db.query("select * from public.instructions where role = 'OVR'")).rows
+            .length,
+          1,
+          "other roles survive",
+        );
       },
     );
 

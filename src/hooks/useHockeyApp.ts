@@ -1,7 +1,21 @@
+import { instructionLinks } from "../lib/instructions";
 import { useEffect, useRef, useState } from "react";
 import { supabase, configuredTeamId } from "../lib/supabase";
+import {
+  normalizeGuideUrl,
+  instructionSaveError,
+  instructionRole,
+} from "../lib/instructions";
 import { demoData, replacementPreviewData } from "../lib/demo";
-import type { Assignment, Data, Profile, Role, Team, Competition } from "../lib/types";
+import type {
+  Assignment,
+  Data,
+  Profile,
+  Role,
+  Team,
+  Competition,
+  Instruction,
+} from "../lib/types";
 import { isPasswordRecoveryUrl, clearPasswordRecoveryUrl } from "../lib/auth";
 
 const EMPTY_DATA: Data = {
@@ -498,6 +512,74 @@ export function useHockeyApp() {
       setBusy(false);
     }
   }
+  async function saveRoleInstructions(role: string, instructions: Instruction[]) {
+    if (!admin || busy) return false;
+    const values = instructions
+      .filter(
+        (item) =>
+          item.body.trim() ||
+          instructionLinks(item).some((link) => link.url.trim() || link.label.trim()),
+      )
+      .map((item) => ({
+        title: item.title.trim(),
+        arena: item.arena.trim(),
+        role: instructionRole(role),
+        body: item.body.trim(),
+        phase: item.phase || "general",
+        guide_url: "",
+        guide_label: "",
+        links: instructionLinks(item)
+          .filter((link) => link.url.trim() || link.label.trim())
+          .map((link) => ({
+            url: normalizeGuideUrl(link.url),
+            label: link.label.trim(),
+          })),
+      }));
+    if (
+      values.some(
+        (item) =>
+          !item.title || item.links.some((link) => !/^https?:\/\/[^\s]+$/.test(link.url)),
+      )
+    ) {
+      setError("Ange en rubrik och giltiga http/https-länkar.");
+      return false;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      if (demo)
+        setData((current) => ({
+          ...current,
+          instructions: [
+            ...current.instructions.filter(
+              (item) => instructionRole(item.role) !== instructionRole(role),
+            ),
+            ...values.map((item) => ({ ...item, id: crypto.randomUUID() })),
+          ],
+        }));
+      else {
+        const { error } = await supabase!.rpc("save_role_instructions_with_links", {
+          p_team_id: configuredTeamId,
+          p_role: instructionRole(role),
+          p_instructions: values,
+        });
+        if (error) throw error;
+        await load();
+      }
+      notify("Uppgiftens instruktioner är sparade.");
+      return true;
+    } catch (error) {
+      setError(
+        (error as { code?: string })?.code === "PGRST202"
+          ? "Kör migrationen 013_instruction_links.sql i Supabase för att kunna spara flera länkar. Formuläret finns kvar."
+          : instructionSaveError(error),
+      );
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function updateProfile(id: string, patch: Partial<Profile>) {
     if (!supabase || demo) return;
     setBusy(true);
@@ -634,6 +716,7 @@ export function useHockeyApp() {
     addPlayers,
     updatePlayer,
     updateProfile,
+    saveRoleInstructions,
     saveMyDutyRoles,
     sync,
     exportData,

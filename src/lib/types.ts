@@ -65,7 +65,20 @@ export type Profile = {
   family_id: string | null;
 };
 
+export const INSTRUCTION_PHASES = {
+  general: "Allmänt",
+  before: "Innan match",
+  during: "Under match",
+  after: "Efter match",
+} as const;
+
+export type InstructionLink = { url: string; label: string };
+
 export type Instruction = {
+  links?: InstructionLink[] | null;
+  phase?: keyof typeof INSTRUCTION_PHASES;
+  guide_url?: string;
+  guide_label?: string;
   id?: string;
   title: string;
   body: string;

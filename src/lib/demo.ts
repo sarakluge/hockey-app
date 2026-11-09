@@ -77,18 +77,21 @@ export const demoData: Data = {
     ),
   instructions: [
     {
+      id: "demo-instruction-1",
       title: "Inför matchen",
       arena: "Alla hallar",
       role: "Alla",
       body: "Detta är en demoinstruktion. Läs lagets godkända instruktioner innan ditt första pass. Kontrollera samlingstid med lagledaren.",
     },
     {
+      id: "demo-instruction-2",
       title: "OVR · matchrapportering",
       arena: "Alla hallar",
       role: "OVR",
       body: "Ta med egen dator. Kontrollera uppkopplingen och inloggningen före match. Fullständiga hallinstruktioner kan importeras av administratören.",
     },
     {
+      id: "demo-instruction-3",
       title: "Efter slutsignalen",
       arena: "Alla hallar",
       role: "Alla",
