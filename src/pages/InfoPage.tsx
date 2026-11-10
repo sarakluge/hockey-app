@@ -1,3 +1,4 @@
+import { LocationOnOutlined, InfoOutlined, ExpandMore } from "@mui/icons-material";
 import { uniqueInstructionArenas } from "../lib/instructions";
 import { Box } from "@mui/material";
 import {
@@ -8,7 +9,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useState } from "react";
-import { MapPin, Info, ChevronDown } from "lucide-react";
+
 import type { HockeyApp } from "../hooks/useHockeyApp";
 import RoleInstructions from "../components/RoleInstructions";
 import PrivacyDialog from "../components/PrivacyDialog";
@@ -19,7 +20,7 @@ export default function InfoPage({ app }: { app: HockeyApp }) {
   const sections = [
     {
       title: "Arena",
-      Icon: MapPin,
+      Icon: LocationOnOutlined,
       content: (
         <>
           {arenas.length ? (
@@ -32,7 +33,7 @@ export default function InfoPage({ app }: { app: HockeyApp }) {
     },
     {
       title: "Kontakt & övrigt",
-      Icon: Info,
+      Icon: InfoOutlined,
       content: (
         <>
           <p>
@@ -57,11 +58,11 @@ export default function InfoPage({ app }: { app: HockeyApp }) {
         {sections.map(({ title, Icon, content }, index) => (
           <Accordion key={title} defaultExpanded={false}>
             <AccordionSummary
-              expandIcon={<ChevronDown size={22} />}
+              expandIcon={<ExpandMore sx={{ fontSize: 22 }} />}
               id={`info-${index}-header`}
               aria-controls={`info-${index}-content`}
             >
-              <Icon size={25} color="currentColor" />
+              <Icon sx={{ fontSize: 25 }} color="inherit" />
               <Typography component="h2" variant="h2">
                 {title}
               </Typography>

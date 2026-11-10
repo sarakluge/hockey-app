@@ -1,6 +1,7 @@
+import { EditOutlined } from "@mui/icons-material";
 import { useState } from "react";
 import { Box, Button, IconButton } from "@mui/material";
-import { Pencil } from "lucide-react";
+
 import SelectField from "./SelectField";
 import type { Family, Profile } from "../lib/types";
 
@@ -88,7 +89,7 @@ export default function UserApprovalCard({
               setEditing(true);
             }}
           >
-            <Pencil size={18} />
+            <EditOutlined sx={{ fontSize: 18 }} />
           </IconButton>
         )}
       </Box>

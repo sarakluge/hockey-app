@@ -1,7 +1,8 @@
+import { AssignmentOutlined } from "@mui/icons-material";
 import { roleIcon } from "../lib/roleIcons";
 import { Box } from "@mui/material";
 import { Alert, Button } from "@mui/material";
-import { ClipboardList } from "lucide-react";
+
 import type { HockeyApp } from "../hooks/useHockeyApp";
 import ReplacementSearches, { FindReplacement } from "../components/ReplacementSearches";
 import { instructionHref } from "../lib/instructions";
@@ -56,7 +57,7 @@ export default function MyShiftsPage({ app }: { app: HockeyApp }) {
                     fullWidth
                     href={instructionHref(assignment.role, match.arena)}
                     key={assignment.role}
-                    startIcon={<Icon size={25} />}
+                    startIcon={<Icon sx={{ fontSize: 25 }} />}
                   >
                     <strong>Min uppgift: {assignment.role}</strong>
                   </Button>
@@ -88,7 +89,7 @@ export default function MyShiftsPage({ app }: { app: HockeyApp }) {
             "& p": { margin: "0" },
           }}
         >
-          <ClipboardList />
+          <AssignmentOutlined />
           <h2>Inga tilldelade pass ännu</h2>
           <p>Dina uppgifter visas här när bemanningen är planerad.</p>
         </Box>

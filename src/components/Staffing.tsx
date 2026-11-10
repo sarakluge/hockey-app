@@ -63,7 +63,7 @@ export default function Staffing({ match, data, busy, onAssign }: StaffingProps)
             }}
             key={role}
           >
-            <Icon size={21} aria-hidden="true" />
+            <Icon sx={{ fontSize: 21 }} aria-hidden="true" />
             <Box component="span" sx={{ fontWeight: "600" }}>
               {role}
             </Box>

@@ -1,3 +1,4 @@
+import { ExpandMore, EditOutlined } from "@mui/icons-material";
 import { instructionLinks } from "../lib/instructions";
 import SelectField from "./SelectField";
 import { useState } from "react";
@@ -15,7 +16,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { ChevronDown, Pencil } from "lucide-react";
+
 import type { HockeyApp } from "../hooks/useHockeyApp";
 import { INSTRUCTION_PHASES, ROLES, type Instruction } from "../lib/types";
 import {
@@ -103,7 +104,7 @@ export default function InstructionEditor({ app }: { app: HockeyApp }) {
               <ListItem key={role} disablePadding divider>
                 <ListItemButton disabled={app.busy} onClick={() => edit(role)}>
                   <ListItemIcon>
-                    <Icon size={24} />
+                    <Icon sx={{ fontSize: 24 }} />
                   </ListItemIcon>
                   <ListItemText
                     primary={role || "Gemensamt för alla uppgifter"}
@@ -111,7 +112,7 @@ export default function InstructionEditor({ app }: { app: HockeyApp }) {
                       hasContent ? "Redigera instruktioner" : "Lägg till instruktioner"
                     }
                   />
-                  <Pencil size={18} />
+                  <EditOutlined sx={{ fontSize: 18 }} />
                 </ListItemButton>
               </ListItem>
             );
@@ -138,7 +139,7 @@ export default function InstructionEditor({ app }: { app: HockeyApp }) {
           </p>
           {halls.map((arena) => (
             <Accordion key={arena} defaultExpanded={!arena} sx={{ mb: 2 }}>
-              <AccordionSummary expandIcon={<ChevronDown size={20} />}>
+              <AccordionSummary expandIcon={<ExpandMore sx={{ fontSize: 20 }} />}>
                 <Typography component="h4" sx={{ fontWeight: 700 }}>
                   {arena || "Gemensamt för alla hallar"}
                 </Typography>

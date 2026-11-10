@@ -1,6 +1,7 @@
+import { ChevronRight, ArrowBack } from "@mui/icons-material";
 import { instructionLinks } from "../lib/instructions";
 import InstructionText from "./InstructionText";
-import { ChevronRight, ArrowLeft } from "lucide-react";
+
 import { roleIcon } from "../lib/roleIcons";
 import { instructionsForRole, uniqueInstructionArenas } from "../lib/instructions";
 import { useEffect, useState } from "react";
@@ -86,10 +87,10 @@ export default function RoleInstructions({
                     sx={{ py: 1.5 }}
                   >
                     <ListItemIcon sx={{ minWidth: 40, color: "primary.main" }}>
-                      <Icon size={24} />
+                      <Icon sx={{ fontSize: 24 }} />
                     </ListItemIcon>
                     <ListItemText primary={role} />
-                    <ChevronRight size={20} aria-hidden="true" />
+                    <ChevronRight sx={{ fontSize: 20 }} aria-hidden="true" />
                   </ListItemButton>
                 </ListItem>
               );
@@ -100,7 +101,7 @@ export default function RoleInstructions({
         <>
           <Button
             href="#instruktioner"
-            startIcon={<ArrowLeft size={16} />}
+            startIcon={<ArrowBack sx={{ fontSize: 16 }} />}
             sx={{ mb: 2 }}
           >
             Alla uppgifter
@@ -149,7 +150,7 @@ export default function RoleInstructions({
               </SelectField>
             </Box>
             <Box sx={{ color: "primary.main", pt: 1 }}>
-              <RoleIcon size={40} strokeWidth={1.5} aria-hidden="true" />
+              <RoleIcon sx={{ fontSize: 40 }} aria-hidden="true" />
             </Box>
           </Box>
           {!relevant.length && (

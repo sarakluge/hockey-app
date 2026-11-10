@@ -1,7 +1,8 @@
+import { MailOutlined } from "@mui/icons-material";
 import { Box } from "@mui/material";
 import { Button, TextField } from "@mui/material";
 import { useState } from "react";
-import { Mail } from "lucide-react";
+
 import { supabase } from "../lib/supabase";
 
 export default function InviteUser({
@@ -56,7 +57,7 @@ export default function InviteUser({
           onChange={(e) => setEmail(e.target.value)}
         />
         <Button type="submit" variant="outlined" disabled={busy || demo}>
-          <Mail size={16} />
+          <MailOutlined sx={{ fontSize: 16 }} />
           Skicka inbjudan
         </Button>
       </Box>

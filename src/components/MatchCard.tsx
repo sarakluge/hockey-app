@@ -1,6 +1,7 @@
+import { LocationOnOutlined } from "@mui/icons-material";
 import { Box } from "@mui/material";
 import { Alert, Card, Divider, Typography } from "@mui/material";
-import { MapPin } from "lucide-react";
+
 import type { ReactNode } from "react";
 import { formatDate, type Data, type Match } from "../lib/types";
 import Badge from "./Badge";
@@ -100,7 +101,7 @@ export default function MatchCard({
               fontSize: "0.875rem",
             }}
           >
-            <MapPin size={18} />
+            <LocationOnOutlined sx={{ fontSize: 18 }} />
             {match.arena}
           </Box>
         </Box>

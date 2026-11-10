@@ -1,6 +1,16 @@
 import AppSnackbar from "./components/AppSnackbar";
 import { lazy, Suspense, useEffect, useState } from "react";
-import { CalendarDays, UserRound, Info, RefreshCw, ArrowLeft } from "lucide-react";
+
+import {
+  CalendarMonth,
+  CalendarMonthOutlined,
+  Person,
+  PersonOutlined,
+  Info,
+  InfoOutlined,
+  Refresh,
+  ArrowBack,
+} from "@mui/icons-material";
 import {
   AppBar,
   Alert,
@@ -32,9 +42,27 @@ const InfoPage = lazy(() => import("./pages/InfoPage"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 
 const tabs = [
-  { id: "matcher", label: "Matcher", title: "Hemmamatcher", Icon: CalendarDays },
-  { id: "mina", label: "Mina pass", title: "Mina pass", Icon: UserRound },
-  { id: "instruktioner", label: "Info", title: "Info", Icon: Info },
+  {
+    id: "matcher",
+    label: "Matcher",
+    title: "Hemmamatcher",
+    Icon: CalendarMonthOutlined,
+    ActiveIcon: CalendarMonth,
+  },
+  {
+    id: "mina",
+    label: "Mina pass",
+    title: "Mina pass",
+    Icon: PersonOutlined,
+    ActiveIcon: Person,
+  },
+  {
+    id: "instruktioner",
+    label: "Info",
+    title: "Info",
+    Icon: InfoOutlined,
+    ActiveIcon: Info,
+  },
 ];
 
 function currentPage() {
@@ -135,7 +163,7 @@ export default function App() {
         >
           {!needsRoles && (page === "admin" || page === "profil") ? (
             <IconButton href="#matcher" aria-label="Till matcher" color="inherit">
-              <ArrowLeft />
+              <ArrowBack />
             </IconButton>
           ) : (
             <HockeyMark />
@@ -156,7 +184,7 @@ export default function App() {
             aria-expanded={!!menuAnchor}
             onClick={(e) => setMenuAnchor(e.currentTarget)}
           >
-            <UserRound />
+            <PersonOutlined />
           </IconButton>
           <Menu
             id="profile-menu"
@@ -252,7 +280,7 @@ export default function App() {
           {access && (
             <Box>
               <Button
-                startIcon={<RefreshCw size={16} />}
+                startIcon={<Refresh sx={{ fontSize: 16 }} />}
                 disabled={app.busy || app.loading}
                 onClick={() =>
                   app.demo
@@ -286,29 +314,32 @@ export default function App() {
             value={page === "admin" || page === "profil" ? false : page}
             sx={{ height: 72 }}
           >
-            {tabs.map(({ id, label, Icon }) => (
-              <BottomNavigationAction
-                key={id}
-                value={id}
-                href={`#${id}`}
-                label={label}
-                icon={
-                  id === "mina" ? (
-                    <Badge badgeContent={pendingRequests.length} color="error">
-                      <Icon size={25} />
-                    </Badge>
-                  ) : (
-                    <Icon size={25} />
-                  )
-                }
-                aria-label={
-                  id === "mina" && pendingRequests.length
-                    ? `Mina pass, ${pendingRequests.length} obesvarade förfrågningar`
-                    : label
-                }
-                aria-current={page === id ? "page" : undefined}
-              />
-            ))}
+            {tabs.map(({ id, label, Icon, ActiveIcon }) => {
+              const TabIcon = page === id ? ActiveIcon : Icon;
+              return (
+                <BottomNavigationAction
+                  key={id}
+                  value={id}
+                  href={`#${id}`}
+                  label={label}
+                  icon={
+                    id === "mina" ? (
+                      <Badge badgeContent={pendingRequests.length} color="error">
+                        <TabIcon sx={{ fontSize: 25 }} />
+                      </Badge>
+                    ) : (
+                      <TabIcon sx={{ fontSize: 25 }} />
+                    )
+                  }
+                  aria-label={
+                    id === "mina" && pendingRequests.length
+                      ? `Mina pass, ${pendingRequests.length} obesvarade förfrågningar`
+                      : label
+                  }
+                  aria-current={page === id ? "page" : undefined}
+                />
+              );
+            })}
           </BottomNavigation>
         </Paper>
       )}

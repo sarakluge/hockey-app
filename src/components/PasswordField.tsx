@@ -1,6 +1,6 @@
+import { VisibilityOutlined, VisibilityOffOutlined } from "@mui/icons-material";
 import { useState } from "react";
 import { IconButton, InputAdornment, TextField } from "@mui/material";
-import { Eye, EyeOff } from "lucide-react";
 
 interface PasswordFieldProps {
   label: string;
@@ -43,7 +43,11 @@ export default function PasswordField({
                 edge="end"
                 disabled={disabled}
               >
-                {visible ? <EyeOff size={20} /> : <Eye size={20} />}
+                {visible ? (
+                  <VisibilityOffOutlined sx={{ fontSize: 20 }} />
+                ) : (
+                  <VisibilityOutlined sx={{ fontSize: 20 }} />
+                )}
               </IconButton>
             </InputAdornment>
           ),

@@ -1,5 +1,6 @@
+import { VolunteerActivismOutlined } from "@mui/icons-material";
 import { Box, Button, Typography } from "@mui/material";
-import { HandHelping } from "lucide-react";
+
 import type { pendingReplacementRequests } from "../lib/replacementRequests";
 
 type Requests = ReturnType<typeof pendingReplacementRequests>;
@@ -45,7 +46,7 @@ export default function ReplacementRequestBanner({
             py: 0.5,
           }}
         >
-          <HandHelping size={20} aria-hidden="true" />
+          <VolunteerActivismOutlined sx={{ fontSize: 20 }} aria-hidden="true" />
           <Typography
             component="h2"
             id="replacement-banner-title"

@@ -1,16 +1,23 @@
-import { ClipboardList, DoorOpen, Monitor, Mic, Timer, Users } from "lucide-react";
+import {
+  AssignmentOutlined,
+  MeetingRoomOutlined,
+  DesktopWindowsOutlined,
+  MicNone,
+  TimerOutlined,
+  PeopleOutlined,
+} from "@mui/icons-material";
 
 const roleIcons = {
-  Båsdörr: DoorOpen,
-  "Båsdörr 1": DoorOpen,
-  "Båsdörr 2": DoorOpen,
-  OVR: Monitor,
-  Klockan: Timer,
-  Klocka: Timer,
-  "Speaker/Musik": Mic,
-  Matchvärd: Users,
+  Båsdörr: MeetingRoomOutlined,
+  "Båsdörr 1": MeetingRoomOutlined,
+  "Båsdörr 2": MeetingRoomOutlined,
+  OVR: DesktopWindowsOutlined,
+  Klockan: TimerOutlined,
+  Klocka: TimerOutlined,
+  "Speaker/Musik": MicNone,
+  Matchvärd: PeopleOutlined,
 };
 
 export function roleIcon(role: string) {
-  return roleIcons[role as keyof typeof roleIcons] || ClipboardList;
+  return roleIcons[role as keyof typeof roleIcons] || AssignmentOutlined;
 }

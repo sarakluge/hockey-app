@@ -1,3 +1,4 @@
+import { Close } from "@mui/icons-material";
 import {
   Button,
   Dialog,
@@ -7,7 +8,6 @@ import {
   DialogTitle,
   IconButton,
 } from "@mui/material";
-import { X } from "lucide-react";
 
 export default function PrivacyDialog({ onClose }: { onClose: () => void }) {
   return (
@@ -27,7 +27,7 @@ export default function PrivacyDialog({ onClose }: { onClose: () => void }) {
         onClick={onClose}
         sx={{ position: "absolute", top: 8, right: 8 }}
       >
-        <X />
+        <Close />
       </IconButton>
       <DialogContent id="privacy-description">
         <DialogContentText component="p" sx={{ mb: 2 }}>

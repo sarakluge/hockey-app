@@ -1,3 +1,4 @@
+import { Refresh, Download } from "@mui/icons-material";
 import { instructionRole } from "../lib/instructions";
 import InstructionEditor from "../components/InstructionEditor";
 import SeasonSchedule from "../components/SeasonSchedule";
@@ -18,7 +19,7 @@ import {
 } from "@mui/material";
 import SelectField from "../components/SelectField";
 import { useState } from "react";
-import { RefreshCw, Download } from "lucide-react";
+
 import type { HockeyApp } from "../hooks/useHockeyApp";
 import { distribution, formatDate, type Profile } from "../lib/types";
 import Badge from "../components/Badge";
@@ -366,11 +367,11 @@ export default function AdminPage({ app }: { app: HockeyApp }) {
             disabled={busy || (!demo && !app.team?.sync_enabled)}
             onClick={() => void sync()}
           >
-            <RefreshCw size={16} />
+            <Refresh sx={{ fontSize: 16 }} />
             Hämta matcher
           </Button>
           <Button variant="outlined" onClick={exportData}>
-            <Download size={16} />
+            <Download sx={{ fontSize: 16 }} />
             Exportera data
           </Button>
         </Box>

@@ -1,3 +1,10 @@
+import {
+  Search,
+  CheckCircleOutlined,
+  ErrorOutlined,
+  Block,
+  ExpandMore,
+} from "@mui/icons-material";
 import { useState } from "react";
 import {
   Accordion,
@@ -14,7 +21,7 @@ import {
   DialogContent,
   DialogActions,
 } from "@mui/material";
-import { Search, CircleCheck, CircleAlert, Ban, ChevronDown } from "lucide-react";
+
 import type { HockeyApp } from "../hooks/useHockeyApp";
 import { eligible, formatDate, type Role } from "../lib/types";
 import SelectField from "./SelectField";
@@ -146,9 +153,9 @@ export default function ReplacementSearches({
         const open = search.status === "searching";
         const StatusIcon = {
           searching: Search,
-          found: CircleCheck,
-          exhausted: CircleAlert,
-          cancelled: Ban,
+          found: CheckCircleOutlined,
+          exhausted: ErrorOutlined,
+          cancelled: Block,
         }[search.status];
         const statusColor = {
           searching: "primary.main",
@@ -179,7 +186,7 @@ export default function ReplacementSearches({
                   sx={{ color: statusColor, display: "flex", mt: "2px" }}
                   aria-hidden="true"
                 >
-                  <StatusIcon size={22} />
+                  <StatusIcon sx={{ fontSize: 22 }} />
                 </Box>
                 <Box sx={{ minWidth: 0 }}>
                   <Typography
@@ -381,7 +388,7 @@ export default function ReplacementSearches({
               }
             >
               <AccordionSummary
-                expandIcon={<ChevronDown size={18} />}
+                expandIcon={<ExpandMore sx={{ fontSize: 18 }} />}
                 id={`replacement-${search.id}-summary`}
                 aria-controls={`replacement-${search.id}-details`}
                 sx={{ "& .MuiAccordionSummary-content": { minWidth: 0 } }}

@@ -1,3 +1,8 @@
+import {
+  CalendarMonthOutlined,
+  AssignmentOutlined,
+  VerifiedUserOutlined,
+} from "@mui/icons-material";
 import AppSnackbar from "../components/AppSnackbar";
 import { useState } from "react";
 import {
@@ -13,7 +18,7 @@ import {
   Tabs,
   Typography,
 } from "@mui/material";
-import { CalendarDays, ClipboardList, ShieldCheck } from "lucide-react";
+
 import type { HockeyApp } from "../hooks/useHockeyApp";
 import { supabase } from "../lib/supabase";
 import AuthForm from "../components/AuthForm";
@@ -100,12 +105,12 @@ export default function AuthPage({ app }: { app: HockeyApp }) {
           </Typography>
           <Stack spacing={2.5} sx={{ mt: 5 }}>
             {[
-              { Icon: CalendarDays, text: "Lagets hemmamatcher" },
-              { Icon: ClipboardList, text: "Dina pass på ett ställe" },
-              { Icon: ShieldCheck, text: "Tillgång för godkända lagmedlemmar" },
+              { Icon: CalendarMonthOutlined, text: "Lagets hemmamatcher" },
+              { Icon: AssignmentOutlined, text: "Dina pass på ett ställe" },
+              { Icon: VerifiedUserOutlined, text: "Tillgång för godkända lagmedlemmar" },
             ].map(({ Icon, text }) => (
               <Stack direction="row" spacing={2} key={text} sx={{ alignItems: "center" }}>
-                <Icon size={21} color="#99c9ff" />
+                <Icon sx={{ fontSize: 21, color: "#99c9ff" }} />
                 <Typography variant="body2">{text}</Typography>
               </Stack>
             ))}

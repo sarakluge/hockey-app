@@ -1,3 +1,4 @@
+import { ExpandMore } from "@mui/icons-material";
 import { useId, type ReactNode } from "react";
 import {
   Accordion,
@@ -8,7 +9,6 @@ import {
   Paper,
   Typography,
 } from "@mui/material";
-import { ChevronDown } from "lucide-react";
 
 export default function AdminPanel({
   children,
@@ -48,7 +48,7 @@ export default function AdminPanel({
       sx={{ mb: 1.5, "& > .MuiAccordion-heading": { m: 0 } }}
     >
       <AccordionSummary
-        expandIcon={<ChevronDown size={20} />}
+        expandIcon={<ExpandMore sx={{ fontSize: 20 }} />}
         id={`${id}-summary`}
         aria-controls={`${id}-content`}
       >

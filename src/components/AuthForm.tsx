@@ -1,7 +1,8 @@
+import { ArrowForward } from "@mui/icons-material";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { Alert, Button, CircularProgress, Stack, TextField } from "@mui/material";
-import { ArrowRight } from "lucide-react";
+
 import { supabase } from "../lib/supabase";
 import { authRedirectUrl, passwordValidation } from "../lib/auth";
 import type { HockeyApp } from "../hooks/useHockeyApp";
@@ -203,7 +204,7 @@ export default function AuthForm({ mode, app, onModeChange }: AuthFormProps) {
               busy ? (
                 <CircularProgress size={18} color="inherit" />
               ) : (
-                <ArrowRight size={18} />
+                <ArrowForward sx={{ fontSize: 18 }} />
               )
             }
           >
