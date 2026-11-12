@@ -18,6 +18,7 @@ interface MatchCardProps {
   data: Data;
   children?: ReactNode;
   showStaffing?: boolean;
+  highlighted?: boolean;
 }
 
 export default function MatchCard({
@@ -25,6 +26,7 @@ export default function MatchCard({
   data,
   children,
   showStaffing = true,
+  highlighted = false,
 }: MatchCardProps) {
   const isDm = match.kind === "dm" || (!match.kind && match.competition === "22208");
   const date = match.starts_at
@@ -37,7 +39,11 @@ export default function MatchCard({
   return (
     <Card
       component="article"
-      sx={{ padding: "20px", "@media (max-width: 400px)": { padding: "16px" } }}
+      sx={{
+        padding: "20px",
+        "@media (max-width: 400px)": { padding: "16px" },
+        ...(highlighted && { border: "2px solid", borderColor: "primary.main" }),
+      }}
     >
       <Box
         sx={{

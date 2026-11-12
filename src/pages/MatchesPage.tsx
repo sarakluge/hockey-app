@@ -1,14 +1,21 @@
 import { Alert, Checkbox, FormControlLabel, Box } from "@mui/material";
 import SelectField from "../components/SelectField";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { HockeyApp } from "../hooks/useHockeyApp";
 import ReplacementSearches from "../components/ReplacementSearches";
 import MatchCard from "../components/MatchCard";
+import { formatDate } from "../lib/types";
 
 export default function MatchesPage({ app }: { app: HockeyApp }) {
   const [period, setPeriod] = useState("upcoming");
   const [competition, setCompetition] = useState("all");
-  const now = app.demo ? new Date("2026-11-05T12:00:00Z") : new Date();
+  const [clock, setClock] = useState(Date.now);
+  const now = app.demo ? new Date("2026-11-05T12:00:00Z") : new Date(clock);
+  useEffect(() => {
+    if (app.demo) return;
+    const timer = window.setInterval(() => setClock(Date.now()), 15_000);
+    return () => window.clearInterval(timer);
+  }, [app.demo]);
   const matches = [...app.data.matches]
     .sort((first, second) =>
       (first.starts_at || "9999").localeCompare(second.starts_at || "9999"),
@@ -16,7 +23,8 @@ export default function MatchesPage({ app }: { app: HockeyApp }) {
     .filter((match) => {
       const isPast =
         match.status === "finished" ||
-        (match.starts_at !== null && new Date(match.starts_at) < now);
+        (match.starts_at !== null &&
+          Date.parse(match.starts_at) + 60 * 60 * 1000 <= now.getTime());
       const matchesPeriod = period === "all" || (period === "past" ? isPast : !isPast);
       return (
         matchesPeriod && (competition === "all" || match.competition === competition)
@@ -68,7 +76,17 @@ export default function MatchesPage({ app }: { app: HockeyApp }) {
       )}
       <Box sx={{ display: "grid", gap: "20px" }}>
         {matches.map((match) => (
-          <MatchCard key={match.id} match={match} data={app.data}>
+          <MatchCard
+            key={match.id}
+            match={match}
+            data={app.data}
+            highlighted={
+              !["finished", "cancelled"].includes(match.status) &&
+              match.starts_at !== null &&
+              formatDate(match.starts_at) === formatDate(now.toISOString()) &&
+              Date.parse(match.starts_at) + 60 * 60 * 1000 > now.getTime()
+            }
+          >
             <ReplacementSearches app={app} matchId={match.id} />
             {app.ownFamily &&
               match.status !== "finished" &&
