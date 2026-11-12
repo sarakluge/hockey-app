@@ -1,5 +1,6 @@
 import {
   Search,
+  PeopleOutlined,
   CheckCircleOutlined,
   ErrorOutlined,
   Block,
@@ -98,6 +99,7 @@ export default function ReplacementSearches({
   adminView?: boolean;
 }) {
   const [expandedSearches, setExpandedSearches] = useState<Record<string, boolean>>({});
+  const [acceptSearch, setAcceptSearch] = useState<string | null>(null);
   const [adminTab, setAdminTab] = useState("active");
   const [families, setFamilies] = useState<Record<string, string>>({});
   const searches = app.data.replacementSearches
@@ -126,6 +128,51 @@ export default function ReplacementSearches({
   if (!searches.length && !adminView) return null;
   return (
     <Box sx={{ display: "grid", gap: adminView ? 1 : 2, mt: adminView ? 0 : 2 }}>
+      <Dialog
+        open={!!acceptSearch}
+        onClose={() => setAcceptSearch(null)}
+        aria-labelledby="accept-replacement-title"
+      >
+        <DialogTitle id="accept-replacement-title">Ta över passet?</DialogTitle>
+        <DialogContent>
+          {(() => {
+            const search = searches.find((s) => s.id === acceptSearch);
+            const match = app.data.matches.find((m) => m.id === search?.match_id);
+            return (
+              <>
+                Vill din familj ta över passet som {search?.role} mot {match?.away_team}
+                {match?.starts_at && (
+                  <>
+                    {" "}
+                    den{" "}
+                    {formatDate(match.starts_at, {
+                      day: "numeric",
+                      month: "long",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </>
+                )}
+                ? Passet läggs till under Mina pass.
+              </>
+            );
+          })()}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAcceptSearch(null)}>Avbryt</Button>
+          <Button
+            variant="contained"
+            disabled={app.busy}
+            onClick={() => {
+              if (acceptSearch)
+                void app.replacementAction("accept", { searchId: acceptSearch });
+              setAcceptSearch(null);
+            }}
+          >
+            Ta passet
+          </Button>
+        </DialogActions>
+      </Dialog>
       {adminView && (
         <Tabs
           value={adminTab}
@@ -167,6 +214,19 @@ export default function ReplacementSearches({
           open &&
           invitation?.response === "pending" &&
           (!search.deadline || new Date(search.deadline) > new Date());
+        const family = app.data.families.find((f) => f.id === app.ownFamily);
+        const canAccept =
+          open &&
+          !own &&
+          !!family &&
+          !family.staffing_exempt &&
+          eligible(family, search.role) &&
+          !!match &&
+          !["finished", "cancelled"].includes(match.status) &&
+          (!match.starts_at || new Date(match.starts_at) > new Date()) &&
+          !app.data.unavailability.some(
+            (u) => u.match_id === search.match_id && u.family_id === family.id,
+          );
         const candidates = app.data.families.filter(
           (f) =>
             f.id !== search.original_family_id &&
@@ -193,7 +253,7 @@ export default function ReplacementSearches({
                     component="h3"
                     sx={{ fontSize: "1rem", fontWeight: 700, color: "text.primary" }}
                   >
-                    {canRespond ? "Kan din familj ta passet?" : statuses[search.status]}
+                    {open && own ? "Du söker ersättare" : statuses[search.status]}
                   </Typography>
                   <Typography
                     component="p"
@@ -221,6 +281,15 @@ export default function ReplacementSearches({
                     )}
                   </Typography>
                 </Box>
+                {canRespond && !own && (
+                  <Chip
+                    icon={<PeopleOutlined />}
+                    label="Tillfrågad"
+                    color="primary"
+                    size="small"
+                    sx={{ ml: "auto" }}
+                  />
+                )}
               </Box>
             )}
             <p>
@@ -236,13 +305,13 @@ export default function ReplacementSearches({
                 </>
               )}
             </p>
-            {(open || search.status === "exhausted") && (
+            {(own || adminView) && (open || search.status === "exhausted") && (
               <p>
                 {own ? "Ni" : "Den ursprungliga familjen"} ansvarar för passet tills någon
                 har tagit över.
               </p>
             )}
-            {open && (
+            {open && (own || adminView) && (
               <p>
                 Grupp {search.current_group}: {groups[search.current_group]}
                 {search.deadline && (
@@ -259,25 +328,40 @@ export default function ReplacementSearches({
                 )}
               </p>
             )}
-            {canRespond && (
-              <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+            {open && !own && !adminView && (
+              <p>
+                {canRespond
+                  ? "Din familj har fått frågan om att ta över passet."
+                  : "Alla behöriga familjer kan ta passet."}
+              </p>
+            )}
+            {canAccept && (
+              <Box
+                sx={{
+                  display: "flex",
+                  gap: 1,
+                  flexWrap: "wrap",
+                  justifyContent: canRespond ? "flex-start" : "flex-end",
+                }}
+              >
                 <Button
                   variant="contained"
                   disabled={app.busy}
-                  onClick={() =>
-                    void app.replacementAction("accept", { searchId: search.id })
-                  }
+                  onClick={() => setAcceptSearch(search.id)}
                 >
-                  Jag kan ta passet
+                  Ta passet
                 </Button>
-                <Button
-                  disabled={app.busy}
-                  onClick={() =>
-                    void app.replacementAction("decline", { searchId: search.id })
-                  }
-                >
-                  Kan inte
-                </Button>
+                {canRespond && (
+                  <Button
+                    variant="outlined"
+                    disabled={app.busy}
+                    onClick={() =>
+                      void app.replacementAction("decline", { searchId: search.id })
+                    }
+                  >
+                    Kan inte
+                  </Button>
+                )}
               </Box>
             )}
             {invitation?.response === "declined" && open && (
@@ -485,8 +569,8 @@ export default function ReplacementSearches({
             sx={{
               p: 2,
               border: "1px solid",
-              borderColor: "primary.main",
-              borderRadius: 1,
+              borderColor: "#c5dfff",
+              borderRadius: 2,
               backgroundColor: "#eff6ff",
             }}
           >

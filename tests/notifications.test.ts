@@ -31,6 +31,8 @@ test("external notifications respect group activation, recipients, consent, leas
       "009_manual_multiple_positions.sql",
       "010_staffing_exempt.sql",
       "014_external_notifications.sql",
+      "017_open_replacement_acceptance.sql",
+      "018_voluntary_multiple_shifts.sql",
     ]) {
       await db.exec(await readFile(`supabase/migrations/${file}`, "utf8"));
     }

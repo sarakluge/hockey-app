@@ -30,6 +30,8 @@ test("replacement searches enforce ownership, eligibility, priority and atomic h
       "008_scheduling.sql",
       "009_manual_multiple_positions.sql",
       "010_staffing_exempt.sql",
+      "017_open_replacement_acceptance.sql",
+      "018_voluntary_multiple_shifts.sql",
     ]) {
       await db.exec(await readFile(`supabase/migrations/${file}`, "utf8"));
     }
@@ -125,7 +127,7 @@ test("replacement searches enforce ownership, eligibility, priority and atomic h
           (await db.query("select * from public.replacement_invitations")).rows.length,
           0,
         );
-        await assert.rejects(act(id, "accept"));
+        await assert.rejects(act(id, "decline"));
         await assert.rejects(act(id, "next"));
         await assert.rejects(act(id, "assign", uuid(4)));
         await assert.rejects(act(id, "cancel"));
@@ -347,7 +349,7 @@ test("replacement searches enforce ownership, eligibility, priority and atomic h
       },
     );
     await t.test(
-      "one family cannot accept two different slots on the same match",
+      "one family may voluntarily accept multiple slots on the same match",
       async () => {
         await db.exec("reset role");
         await db.exec(`
@@ -360,30 +362,104 @@ test("replacement searches enforce ownership, eligibility, priority and atomic h
         const second = await start("1:13", "Båsdörr 1");
         await login(3);
         await act(first, "accept");
-        await assert.rejects(act(second, "accept"));
+        await act(second, "accept");
         assert.equal(
           await scalar(
             "select count(*)::int as v from public.assignments where match_id='1:13' and family_id=$1",
             [uuid(3)],
           ),
-          1,
+          2,
         );
         await login(8);
-        const before = await scalar<number>(
-          "select current_group as v from public.replacement_searches where id=$1",
-          [second],
+        await assert.rejects(act(second, "accept"));
+      },
+    );
+    await t.test(
+      "open acceptance works before invitation, after decline and without an invitation",
+      async () => {
+        for (const [number, taker, mode] of [
+          [14, 8, "queued"],
+          [15, 2, "declined"],
+          [16, 2, "missing"],
+        ] as const) {
+          await db.exec("reset role");
+          await db.query(
+            `insert into public.matches(team_id,id,competition,source_id,starts_at,home_team,away_team,arena,status)
+          values($1,$2,'1',$3,now()+interval '10 days','Home','Away','Arena','scheduled')`,
+            [team, `1:${number}`, String(number)],
+          );
+          await db.query(
+            "insert into public.assignments(team_id,match_id,role,family_id) values($1,$2,'Matchvärd',$3)",
+            [team, `1:${number}`, uuid(1)],
+          );
+          await login(1);
+          const search = await start(`1:${number}`, "Matchvärd");
+          await db.exec("reset role");
+          if (mode === "queued") {
+            assert.equal(
+              await scalar(
+                "select response as v from public.replacement_invitations where search_id=$1 and family_id=$2",
+                [search, uuid(taker)],
+              ),
+              "queued",
+            );
+          } else if (mode === "missing") {
+            await db.query(
+              "delete from public.replacement_invitations where search_id=$1 and family_id=$2",
+              [search, uuid(taker)],
+            );
+          }
+          await login(taker);
+          if (mode === "declined") await act(search, "decline");
+          await act(search, "accept");
+          assert.equal(
+            await scalar(
+              "select family_id as v from public.assignments where match_id=$1",
+              [`1:${number}`],
+            ),
+            uuid(taker),
+          );
+          assert.equal(
+            await scalar(
+              "select response as v from public.replacement_invitations where search_id=$1 and family_id=$2",
+              [search, uuid(taker)],
+            ),
+            "accepted",
+          );
+          await login(3);
+          await assert.rejects(act(search, "accept"));
+        }
+      },
+    );
+    await t.test(
+      "open acceptance rejects exempt, unqualified, unavailable, owner and past matches",
+      async () => {
+        await db.exec("reset role");
+        await db.exec(`insert into public.matches(team_id,id,competition,source_id,starts_at,home_team,away_team,arena,status)
+        values('${team}','1:17','1','17',now()+interval '10 days','Home','Away','Arena','scheduled');
+        insert into public.assignments values('${team}','1:17','OVR','${uuid(1)}'),('${team}','1:17','Klockan','${uuid(6)}');
+        insert into public.family_unavailability values('${team}','1:17','${uuid(7)}');`);
+        await login(1);
+        const search = await start("1:17");
+        for (const n of [1, 5, 7]) {
+          await login(n);
+          await assert.rejects(act(search, "accept"));
+        }
+        await db.exec("reset role");
+        await db.exec(
+          `update public.families set staffing_exempt=true where id='${uuid(2)}'`,
         );
-        await act(second, "next");
-        const after = await scalar<number>(
-          "select current_group as v from public.replacement_searches where id=$1",
-          [second],
+        await login(2);
+        await assert.rejects(act(search, "accept"));
+        await db.exec("reset role");
+        await db.exec(
+          `update public.matches set starts_at=now()-interval '1 second' where id='1:17'`,
         );
-        assert.ok(
-          after > before ||
-            (await scalar(
-              "select status='exhausted' as v from public.replacement_searches where id=$1",
-              [second],
-            )),
+        await login(4);
+        await assert.rejects(act(search, "accept"));
+        await db.exec("reset role");
+        await db.exec(
+          `update public.families set staffing_exempt=false where id='${uuid(2)}'`,
         );
       },
     );

@@ -2,7 +2,7 @@
 
 Vi börjar med pushnotiser. Inga mejl skickas för ersättarförfrågningar. Supabase Auths vanliga mejl för inloggning och lösenordsåterställning påverkas inte.
 
-När familjens grupp står på tur köas push till varje godkänd förälders registrerade enheter. Besked om ersättare skickas också till berörda familjers enheter. Föräldern aktiverar eller stänger av push under **Min profil → Notiser**. Förfrågningarna finns alltid kvar under Mina pass.
+När familjens grupp står på tur köas push till varje godkänd förälders registrerade enheter. Besked om ersättare skickas också till berörda familjers enheter. Föräldern aktiverar eller stänger av push under **Min profil → Notiser**. Tillfrågade familjer ser förfrågningarna under Mina pass. Alla godkända familjer kan se öppna förfrågningar på matchkortet under bemanningen, och alla behöriga familjer kan ta passet där utan att ha fått en notis. Familjer får frivilligt ta flera pass på samma match. Familjer som har markerat sig otillgängliga eller är undantagna från bemanning kan inte ta över själva. Ett tidigare ”Kan inte” hindrar inte ett senare övertagande medan sökningen pågår.
 
 ## Aktivering
 
@@ -69,3 +69,9 @@ Saknas pushkonfiguration hämtas inga utskick och inga återförsök förbrukas.
 - [Supabase Cron och Vault](https://supabase.com/docs/guides/functions/schedule-functions)
 - [Web Push på iOS/iPadOS](https://webkit.org/blog/13878/web-push-for-web-apps-on-ios-and-ipados/)
 - [web-push](https://github.com/web-push-libs/web-push)
+
+## Öppna förfrågningar på matchkortet
+
+Kör `017_open_replacement_acceptance.sql` före publicering av den uppdaterade frontendversionen. Migrationen öppnar övertagande för behöriga familjer; gruppindelning och pushutskick behåller sin turordning. Endast aktivt tillfrågade familjer kan svara ”Kan inte”. Övertagandet bekräftas i appen och kontrolleras atomärt i databasen, så bara en familj kan ta passet. Avslutade sökningar öppnas inte igen.
+
+Kör därefter `018_voluntary_multiple_shifts.sql` för att tillåta flera frivilliga övertaganden på samma match. Den automatiska bemanningen och urvalet för riktade förfrågningar påverkas inte. Har 017 redan körts räcker det att köra 018.
