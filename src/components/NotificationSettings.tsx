@@ -2,6 +2,13 @@ import { useEffect, useState } from "react";
 import {
   Alert,
   Button,
+  Box,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  Tooltip,
   Card,
   CardContent,
   FormControlLabel,
@@ -9,6 +16,7 @@ import {
   Switch,
   Typography,
 } from "@mui/material";
+import { Close, HelpOutlined } from "@mui/icons-material";
 import type { HockeyApp } from "../hooks/useHockeyApp";
 import { supabase } from "../lib/supabase";
 import {
@@ -21,6 +29,8 @@ import {
 } from "../lib/pushNotifications";
 
 export default function NotificationSettings({ app }: { app: HockeyApp }) {
+  const [helpOpen, setHelpOpen] = useState(false);
+  const guideUrl = `${import.meta.env.BASE_URL}guides/notifications.png`;
   const [loaded, setLoaded] = useState(false);
   const [retry, setRetry] = useState(0);
   const [push, setPush] = useState(false);
@@ -74,7 +84,20 @@ export default function NotificationSettings({ app }: { app: HockeyApp }) {
     <Card>
       <CardContent>
         <Stack spacing={2}>
-          <Typography variant="h2">Notiser</Typography>
+          <Stack
+            direction="row"
+            sx={{ alignItems: "center", justifyContent: "space-between" }}
+          >
+            <Typography variant="h2">Notiser</Typography>
+            <Tooltip title="Så aktiverar du notiser">
+              <IconButton
+                aria-label="Hjälp med notiser"
+                onClick={() => setHelpOpen(true)}
+              >
+                <HelpOutlined />
+              </IconButton>
+            </Tooltip>
+          </Stack>
           <Typography>
             Få en förfrågan när det är din familjs tur att svara, och besked när ett pass
             har fått en ersättare.
@@ -102,21 +125,6 @@ export default function NotificationSettings({ app }: { app: HockeyApp }) {
             Pushnotiser gäller den här enheten. Du behöver aktivera dem på varje mobil
             eller dator du använder.
           </Typography>
-          {needsHomeScreen() && (
-            <Alert severity="info">
-              På iPhone och iPad: välj Dela → Lägg till på hemskärmen. Öppna sedan appen
-              från hemskärmen och aktivera notiser här.
-            </Alert>
-          )}
-          {!supportsPush() && !needsHomeScreen() && (
-            <Alert severity="info">
-              Den här webbläsaren stöder inte pushnotiser. Förfrågningar visas fortfarande
-              under Mina pass när du öppnar appen.
-            </Alert>
-          )}
-          {!pushPublicKey && (
-            <Alert severity="info">Pushnotiser är inte aktiverade för appen ännu.</Alert>
-          )}
           <FormControlLabel
             label="Pushnotiser på den här enheten"
             control={
@@ -142,6 +150,66 @@ export default function NotificationSettings({ app }: { app: HockeyApp }) {
           />
         </Stack>
       </CardContent>
+      <Dialog
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        maxWidth="lg"
+        fullWidth
+        aria-labelledby="notification-help-title"
+      >
+        <DialogTitle id="notification-help-title" sx={{ pr: 7 }}>
+          Få notiser från Seket
+          <IconButton
+            aria-label="Stäng notishjälpen"
+            onClick={() => setHelpOpen(false)}
+            sx={{ position: "absolute", right: 8, top: 8 }}
+          >
+            <Close />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: { xs: 1, sm: 2 } }}>
+          <Stack spacing={2}>
+            <Typography variant="body2">
+              Lägg till Seket på hemskärmen, öppna appen därifrån och aktivera pushnotiser
+              under Min profil. På iPhone och iPad använder du Dela-menyn i Safari, på
+              Android menyn med tre prickar i Chrome.
+            </Typography>
+            <Box
+              component="img"
+              src={guideUrl}
+              alt="Bildguide för iPhone, iPad och Android: öppna webbläsarens meny, välj Lägg till på hemskärmen och aktivera Pushnotiser på den här enheten i Seket."
+              sx={{ display: "block", width: "100%", height: "auto", borderRadius: 2 }}
+            />
+            <Typography variant="body2">
+              På datorn kan du aktivera notiser direkt i webbläsaren. Tillåt även notiser
+              för webbläsaren i datorns inställningar. Inställningen gäller varje enhet
+              separat.
+            </Typography>
+            {needsHomeScreen() && (
+              <Typography variant="body2">
+                Öppna Seket från hemskärmen för att aktivera notiser på den här enheten.
+              </Typography>
+            )}
+            {!supportsPush() && !needsHomeScreen() && (
+              <Typography variant="body2">
+                Den här webbläsaren stöder inte pushnotiser. Förfrågningar finns
+                fortfarande under Mina pass.
+              </Typography>
+            )}
+            {!pushPublicKey && (
+              <Typography variant="body2">
+                Pushnotiser är inte aktiverade för appen ännu.
+              </Typography>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button href={guideUrl} target="_blank" rel="noopener noreferrer">
+            Öppna bilden i full storlek
+          </Button>
+          <Button onClick={() => setHelpOpen(false)}>Stäng</Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   );
 }
