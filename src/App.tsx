@@ -157,8 +157,14 @@ export default function App() {
             width: "100%",
             maxWidth: 1000,
             mx: "auto",
-            minHeight: { xs: 112, sm: 128 },
-            gap: 2,
+            minHeight: { xs: 80, md: 104 },
+            display: "grid",
+            gridTemplateColumns: {
+              xs: "48px minmax(0, 1fr) 48px",
+              md: "160px minmax(0, 1fr) 160px",
+            },
+            gap: { xs: 1, md: 2 },
+            py: { xs: 1, md: 2 },
           }}
         >
           {!needsRoles && (page === "admin" || page === "profil") ? (
@@ -168,23 +174,35 @@ export default function App() {
           ) : (
             <HockeyMark />
           )}
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="body2" sx={{ opacity: 0.85 }}>
+          <Box sx={{ minWidth: 0, textAlign: "center", overflowWrap: "anywhere" }}>
+            <Typography
+              variant="body2"
+              sx={{ opacity: 0.85, fontSize: { xs: "0.75rem", md: "0.875rem" } }}
+            >
               {app.team?.name || "U16F"} · {app.team?.home_team || "Team Söderort"}
             </Typography>
-            <Typography variant="h1" sx={{ fontSize: { xs: "1.6rem", sm: "2rem" } }}>
+            <Typography
+              variant="h1"
+              sx={{ fontSize: { xs: "1.25rem", md: "2rem" }, lineHeight: 1.2 }}
+            >
               {title}
             </Typography>
           </Box>
           <IconButton
             aria-label="Profilmeny"
+            sx={{
+              justifySelf: "end",
+              width: 44,
+              height: 44,
+              "&:hover": { bgcolor: "rgba(255, 255, 255, 0.18)" },
+            }}
             color="inherit"
             aria-controls={menuAnchor ? "profile-menu" : undefined}
             aria-haspopup="true"
             aria-expanded={!!menuAnchor}
             onClick={(e) => setMenuAnchor(e.currentTarget)}
           >
-            <PersonOutlined />
+            <Person sx={{ fontSize: 35 }} />
           </IconButton>
           <Menu
             id="profile-menu"

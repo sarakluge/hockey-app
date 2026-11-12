@@ -14,6 +14,7 @@ import {
 import type { HockeyApp } from "../hooks/useHockeyApp";
 import { supabase } from "../lib/supabase";
 import { authRedirectUrl, passwordValidation } from "../lib/auth";
+import NotificationSettings from "../components/NotificationSettings";
 import PasswordField from "../components/PasswordField";
 
 export default function ProfilePage({
@@ -122,6 +123,7 @@ export default function ProfilePage({
           </Stack>
         </CardContent>
       </Card>
+      {!required && <NotificationSettings app={app} />}
       {!required && (
         <>
           <Card>

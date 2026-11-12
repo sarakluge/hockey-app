@@ -72,14 +72,9 @@ export default function AuthPage({ app }: { app: HockeyApp }) {
           },
         }}
       >
-        <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+        <Stack spacing={1.5} sx={{ alignItems: "flex-start" }}>
           <HockeyMark />
           <Box>
-            <Typography
-              sx={{ fontSize: "1.6rem", fontWeight: 750, letterSpacing: "0.12em" }}
-            >
-              SEKET
-            </Typography>
             <Typography variant="body2" sx={{ color: "#c8d7e9" }}>
               Lagets gemensamma hemmaplan
             </Typography>

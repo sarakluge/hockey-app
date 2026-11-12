@@ -18,6 +18,19 @@ export default function MyShiftsPage({ app }: { app: HockeyApp }) {
 
   return (
     <Box sx={{ display: "grid", gap: "20px" }}>
+      {!app.demo && (
+        <Alert
+          severity="info"
+          action={
+            <Button color="inherit" href="#profil">
+              Notisinställningar
+            </Button>
+          }
+        >
+          Aktivera pushnotiser under Min profil för att få ersättarförfrågningar även när
+          appen är stängd.
+        </Alert>
+      )}
       {!app.ownFamily && (
         <Alert severity="info">
           Administratören behöver koppla ditt konto till rätt spelare.
