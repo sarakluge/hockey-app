@@ -93,10 +93,12 @@ export default function ReplacementSearches({
   app,
   matchId,
   adminView = false,
+  searchIds,
 }: {
   app: HockeyApp;
   matchId?: string;
   adminView?: boolean;
+  searchIds?: string[];
 }) {
   const [expandedSearches, setExpandedSearches] = useState<Record<string, boolean>>({});
   const [acceptSearch, setAcceptSearch] = useState<string | null>(null);
@@ -105,7 +107,9 @@ export default function ReplacementSearches({
   const searches = app.data.replacementSearches
     .filter(
       (s) =>
+        (!searchIds || searchIds.includes(s.id)) &&
         (adminView || s.status !== "cancelled") &&
+        (adminView || !matchId || s.status === "searching") &&
         (!matchId || s.match_id === matchId) &&
         (adminView ||
           !!matchId ||

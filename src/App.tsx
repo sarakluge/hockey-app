@@ -10,6 +10,7 @@ import {
   InfoOutlined,
   Refresh,
   ArrowBack,
+  Close,
 } from "@mui/icons-material";
 import {
   AppBar,
@@ -80,6 +81,18 @@ export default function App() {
   const [showReplacementInbox, setShowReplacementInbox] = useState(false);
   const [deferredRequests, setDeferredRequests] = useState<string[]>([]);
   const [requestClock, setRequestClock] = useState(Date.now);
+  const [dismissedNotices, setDismissedNotices] = useState<string[]>(() => {
+    try {
+      const saved: unknown = JSON.parse(
+        localStorage.getItem("dismissedReplacementNotices") || "[]",
+      );
+      return Array.isArray(saved)
+        ? saved.filter((id): id is string => typeof id === "string")
+        : [];
+    } catch {
+      return [];
+    }
+  });
   const pendingRequests = pendingReplacementRequests(
     app.data,
     app.ownFamily,
@@ -108,6 +121,28 @@ export default function App() {
         ),
     )
     .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+  const noticeSearch = app.data.replacementSearches.find(
+    (search) => search.id === latestReplacementNotice?.search_id,
+  );
+  const noticeMatch = app.data.matches.find(
+    (match) => match.id === noticeSearch?.match_id,
+  );
+  const showReplacementNotice =
+    latestReplacementNotice &&
+    !dismissedNotices.includes(latestReplacementNotice.id) &&
+    noticeMatch &&
+    !["finished", "cancelled"].includes(noticeMatch.status) &&
+    (!noticeMatch.starts_at || new Date(noticeMatch.starts_at).getTime() > requestClock);
+  const dismissReplacementNotice = () => {
+    if (!latestReplacementNotice) return;
+    const next = [...dismissedNotices, latestReplacementNotice.id];
+    setDismissedNotices(next);
+    try {
+      localStorage.setItem("dismissedReplacementNotices", JSON.stringify(next));
+    } catch {
+      // Keep dismissal working for this visit if browser storage is unavailable.
+    }
+  };
   const latestSync = app.data.logs
     .filter((log) => log.success)
     .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
@@ -254,13 +289,23 @@ export default function App() {
               Demo · Fiktiva matcher och familjer
             </Alert>
           )}
-          {page !== "mina" && latestReplacementNotice && (
+          {page !== "mina" && showReplacementNotice && (
             <Alert
               severity="info"
               action={
-                <Button color="inherit" href="#mina">
-                  Visa
-                </Button>
+                <Box sx={{ display: "flex", alignItems: "center" }}>
+                  <Button color="inherit" href="#mina" onClick={dismissReplacementNotice}>
+                    Visa
+                  </Button>
+                  <IconButton
+                    color="inherit"
+                    size="small"
+                    aria-label="Stäng meddelandet"
+                    onClick={dismissReplacementNotice}
+                  >
+                    <Close fontSize="small" />
+                  </IconButton>
+                </Box>
               }
             >
               {latestReplacementNotice.message}

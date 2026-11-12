@@ -377,6 +377,7 @@ export function useHockeyApp() {
         ],
       }));
       notify("Bemanningen är sparad.");
+      await load();
     } catch {
       if (version === loadVersion.current)
         setError("Bemanningen kunde inte sparas. Försök igen.");

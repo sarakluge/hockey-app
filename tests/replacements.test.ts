@@ -32,6 +32,7 @@ test("replacement searches enforce ownership, eligibility, priority and atomic h
       "010_staffing_exempt.sql",
       "017_open_replacement_acceptance.sql",
       "018_voluntary_multiple_shifts.sql",
+      "019_manual_replacement_resolution.sql",
     ]) {
       await db.exec(await readFile(`supabase/migrations/${file}`, "utf8"));
     }
@@ -276,7 +277,7 @@ test("replacement searches enforce ownership, eligibility, priority and atomic h
             "select status as v from public.replacement_searches where id=$1",
             [id],
           ),
-          "exhausted",
+          "found",
         );
         assert.equal(
           await scalar(
@@ -345,6 +346,35 @@ test("replacement searches enforce ownership, eligibility, priority and atomic h
             [id],
           ),
           "exhausted",
+        );
+      },
+    );
+    await t.test(
+      "manual staffing resolves an exhausted search and closes outstanding invitations",
+      async () => {
+        await login(8);
+        await db.exec(`update public.assignments set family_id='${uuid(2)}'
+          where team_id='${team}' and match_id='1:11' and role='Matchvärd'`);
+        assert.equal(
+          await scalar(
+            "select status as v from public.replacement_searches where id=$1",
+            [id],
+          ),
+          "found",
+        );
+        assert.equal(
+          await scalar(
+            "select replacement_family_id as v from public.replacement_searches where id=$1",
+            [id],
+          ),
+          uuid(2),
+        );
+        assert.equal(
+          await scalar(
+            "select count(*)::int as v from public.replacement_invitations where search_id=$1 and response in ('queued','pending')",
+            [id],
+          ),
+          0,
         );
       },
     );
